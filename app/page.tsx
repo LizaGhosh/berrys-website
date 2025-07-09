@@ -279,13 +279,24 @@ export default function HomePage() {
             founders.
           </p>
 
-          <Button
-            onClick={() => handleBookCall("hero")}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2"
-          >
-            <span>Schedule a demo</span>
-            <ArrowRight className="w-5 h-5" />
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button
+              onClick={() => handleBookCall("hero")}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto"
+            >
+              <span>Schedule a demo</span>
+              <ArrowRight className="w-5 h-5" />
+            </Button>
+            
+            <Button
+              onClick={() => handlePlanSelect("free")}
+              variant="outline"
+              className="border-gray-600 hover:border-purple-500 text-white hover:text-purple-300 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto"
+            >
+              <span>Start Free Trial</span>
+              <span className="text-sm text-gray-400 ml-2">2 months free</span>
+            </Button>
+          </div>
         </div>
       </section>
 
