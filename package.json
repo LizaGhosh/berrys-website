@@ -1,6 +1,7 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "berrys-website",
+  "version": "1.0.0",
+  "description": "berrys.ai - AI pitch feedback tool for founders",
   "private": true,
   "scripts": {
     "build": "next build",
