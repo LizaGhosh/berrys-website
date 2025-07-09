@@ -20,6 +20,9 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         event_label: "demo_booking",
       })
 
+      // Prevent background scrolling on mobile
+      document.body.style.overflow = 'hidden'
+
       // Load Calendly script if not already loaded
       if (!document.querySelector('script[src*="calendly.com"]')) {
         const script = document.createElement("script")
@@ -43,6 +46,8 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
       return () => {
         document.removeEventListener('keydown', handleKeyDown)
+        // Restore background scrolling
+        document.body.style.overflow = 'unset'
       }
     }
   }, [isOpen, onClose])
@@ -51,7 +56,7 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/80 flex items-start md:items-center justify-center p-2 sm:p-4 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           trackEvent("calendly_widget_closed", {
@@ -62,11 +67,11 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         }
       }}
     >
-      <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] relative overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">Book Your Demo with berrys.ai</h3>
-            <p className="text-gray-600">Choose a time that works for you</p>
+      <div className="bg-white rounded-lg w-full max-w-4xl min-h-[95vh] md:h-[80vh] relative overflow-hidden my-2 md:my-auto flex flex-col">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex-1 pr-4">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Book Your Demo with berrys.ai</h3>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Choose a time that works for you</p>
           </div>
           <Button
             variant="ghost"
@@ -78,16 +83,16 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               })
               onClose()
             }}
-            className="rounded-full hover:bg-gray-100 border border-gray-300 bg-white shadow-sm"
+            className="rounded-full hover:bg-gray-100 border border-gray-300 bg-white shadow-sm min-w-[44px] min-h-[44px] flex-shrink-0"
           >
             <X className="w-5 h-5 text-gray-600" />
           </Button>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden p-2 sm:p-4">
           <div
             className="calendly-inline-widget w-full h-full"
             data-url="https://calendly.com/recruiter-berrys-ai/30min?primary_color=7c3aed&text_color=000000&background_color=ffffff"
-            style={{ minWidth: "320px", height: "600px" }}
+            style={{ minWidth: "280px", height: "70vh", minHeight: "500px" }}
           ></div>
         </div>
       </div>
