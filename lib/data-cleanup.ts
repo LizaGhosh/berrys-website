@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY! // Need service role for admin operations
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 interface CleanupStats {
@@ -21,6 +21,11 @@ interface CleanupStats {
 
 export async function performDataCleanup(): Promise<CleanupStats> {
   console.log('🧹 Starting automated data cleanup...')
+  
+  // Warn if using limited functionality
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found - using anon key with limited permissions')
+  }
   
   const stats: CleanupStats = {
     eventsDeleted: 0,
