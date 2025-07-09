@@ -1,40 +1,60 @@
-# Database Setup Scripts
+# 📊 Analytics Database Scripts
 
-This directory contains SQL scripts to set up your Supabase database for berrys.ai analytics.
+Essential SQL scripts for managing your Berrys.ai analytics database.
 
-## Quick Start
+## 🗂️ Available Scripts
 
-1. **Create Supabase Project**: Go to [supabase.com](https://supabase.com) and create a new project
-2. **Run Setup Script**: Copy and paste `setup-supabase-database.sql` in your Supabase SQL Editor
-3. **Get Environment Variables**: Copy your project URL and anon key to Vercel environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| **setup-supabase-database.sql** | Initial database setup | First-time setup |
+| **analytics-queries.sql** | Basic analytics queries | Daily monitoring |
+| **export-all-data.sql** | Export data to CSV/JSON | Data backup/analysis |
+| **data-retention-policy.sql** | Cleanup old data | Monthly maintenance |
+| **reset-database.sql** | Delete all data | Testing/cleanup |
 
-## Files
+## 🚀 Quick Usage
 
-- **setup-supabase-database.sql**: Creates all necessary tables (users, events, sessions)
-- **analytics-queries.sql**: Pre-written queries for analyzing your data
-- **README.md**: This file
+### 1. **Export Your Data**
+```sql
+-- In Supabase SQL Editor, run sections from:
+scripts/export-all-data.sql
+```
 
-## Tables Created
+### 2. **Delete All Data** 
+```sql
+-- WARNING: This deletes everything!
+DELETE FROM events;
+DELETE FROM sessions; 
+DELETE FROM users;
+```
 
-- **users**: Stores user signups with plan selection
-- **events**: Tracks all user interactions (page views, clicks, etc.)
-- **sessions**: Tracks unique visitors and conversion status
+### 3. **Basic Analytics**
+```sql
+-- Run queries from:
+scripts/analytics-queries.sql
+```
 
-## Analytics Queries
+## 🔄 API Export (Alternative)
 
-After you have data, use the queries in `analytics-queries.sql` to analyze:
-- Daily signup trends
-- Conversion funnel performance  
-- Traffic sources
-- User journey analysis
-- Geographic insights
-
-## Environment Variables Needed
+Instead of SQL, you can also export data via API:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_GA_TRACKING_ID=your_google_analytics_id # Optional
-``` 
+# Download all data as JSON
+curl "http://localhost:3000/api/export" > analytics_export.json
+
+# Download specific table as CSV
+curl "http://localhost:3000/api/export?table=users&format=csv" > users.csv
+```
+
+## 📋 Available API Export Options
+
+| Format | URL Example |
+|--------|-------------|
+| All data (JSON) | `/api/export` |
+| Users only (CSV) | `/api/export?table=users&format=csv` |
+| Sessions only (CSV) | `/api/export?table=sessions&format=csv` |
+| Events only (CSV) | `/api/export?table=events&format=csv` |
+| Summary (CSV) | `/api/export?table=summary&format=csv` |
+
+---
+**Need help?** All scripts include detailed comments and instructions. 

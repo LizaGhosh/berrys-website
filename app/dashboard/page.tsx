@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { database } from "@/lib/supabase"
 
 interface AnalyticsData {
@@ -12,17 +14,73 @@ interface AnalyticsData {
   recentUsers: any[]
 }
 
+interface DailyAnalytics {
+  date: string
+  total_sessions: number
+  unique_visitors: number
+  conversions: number
+  conversion_rate: number
+}
+
+interface SessionDetail {
+  session_id: string
+  first_seen: string
+  last_seen: string
+  ip_address: string
+  country: string
+  city: string
+  user_agent: string
+  converted: boolean
+  conversion_plan: string
+  users: any
+  events: any[]
+  device_info: {
+    browser: string
+    os: string
+    device: string
+  }
+}
+
 export default function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [dailyAnalytics, setDailyAnalytics] = useState<DailyAnalytics[]>([])
+  const [cities, setCities] = useState<string[]>([])
+  const [selectedDay, setSelectedDay] = useState<SessionDetail[] | null>(null)
+  const [selectedDayDate, setSelectedDayDate] = useState<string>("")
   const [loading, setLoading] = useState(true)
+  
+  // Filters
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [selectedCity, setSelectedCity] = useState("all")
 
   useEffect(() => {
     async function fetchAnalytics() {
       try {
-        const data = await database.getAnalytics()
-        setAnalytics(data)
+        console.log("🔍 Fetching analytics data...")
+        const [analyticsData, dailyData, citiesData] = await Promise.all([
+          database.getAnalytics(),
+          database.getDailyAnalytics(),
+          database.getCities()
+        ])
+        
+        console.log("📊 Analytics data:", analyticsData)
+        console.log("📅 Daily data:", dailyData)
+        console.log("🏙️ Cities:", citiesData)
+        
+        // Debug the data inconsistency
+        console.log("🔍 DEBUG - Users vs Sessions:", {
+          totalUsers: analyticsData.totalUsers,
+          uniqueVisitors: analyticsData.uniqueVisitors,
+          recentUsersCount: analyticsData.recentUsers.length,
+          dailyDataDays: dailyData.length
+        })
+        
+        setAnalytics(analyticsData)
+        setDailyAnalytics(dailyData)
+        setCities(citiesData)
       } catch (error) {
-        console.error("Failed to fetch analytics:", error)
+        console.error("❌ Failed to fetch analytics:", error)
       } finally {
         setLoading(false)
       }
@@ -30,6 +88,36 @@ export default function AnalyticsDashboard() {
 
     fetchAnalytics()
   }, [])
+
+  const handleFilterChange = async () => {
+    try {
+      const filteredData = await database.getDailyAnalytics({
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        city: selectedCity === "all" ? undefined : selectedCity
+      })
+      setDailyAnalytics(filteredData)
+    } catch (error) {
+      console.error("Failed to apply filters:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (startDate || endDate || (selectedCity && selectedCity !== "all")) {
+      handleFilterChange()
+    }
+  }, [startDate, endDate, selectedCity])
+
+  const handleDayClick = async (date: string) => {
+    try {
+      setSelectedDayDate(date)
+      const dayDetails = await database.getDayDetails(date)
+      console.log("🔍 Day details for", date, ":", dayDetails)
+      setSelectedDay(dayDetails)
+    } catch (error) {
+      console.error("Failed to fetch day details:", error)
+    }
+  }
 
   if (loading) {
     return (
@@ -57,7 +145,7 @@ export default function AnalyticsDashboard() {
     )
   }
 
-  // Calculate funnel metrics
+  // Calculate funnel metrics for overview
   const funnelCounts = analytics.funnelData.reduce(
     (acc, event) => {
       acc[event.event_name] = (acc[event.event_name] || 0) + 1
@@ -71,15 +159,6 @@ export default function AnalyticsDashboard() {
   const planSelections = funnelCounts.plan_selected || 0
   const signups = funnelCounts.signup_completed || 0
 
-  // Plan distribution
-  const planCounts = analytics.planData.reduce(
-    (acc, user) => {
-      acc[user.selected_plan] = (acc[user.selected_plan] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
-
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-7xl mx-auto">
@@ -90,7 +169,7 @@ export default function AnalyticsDashboard() {
           </a>
         </div>
 
-        {/* Key Metrics */}
+        {/* Key Metrics Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="pb-3">
@@ -138,117 +217,118 @@ export default function AnalyticsDashboard() {
           </Card>
         </div>
 
-        {/* Conversion Funnel */}
+
+
+        {/* Daily Analytics Table with Filters */}
         <Card className="bg-gray-900 border-gray-800 mb-8">
           <CardHeader>
-            <CardTitle className="text-white">Conversion Funnel</CardTitle>
-            <CardDescription className="text-gray-400">User journey from page view to signup</CardDescription>
+            <CardTitle className="text-white">Daily Analytics</CardTitle>
+            <CardDescription className="text-gray-400">
+              Click on any day to see detailed user logs. Use filters to narrow down data.
+            </CardDescription>
+            
+            {/* Filters */}
+            <div className="flex gap-4 mt-4">
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm text-gray-300">Start Date</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm text-gray-300">End Date</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm text-gray-300">City</label>
+                <Select value={selectedCity} onValueChange={setSelectedCity}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="All cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All cities</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(startDate || endDate || (selectedCity && selectedCity !== "all")) && (
+                <div className="flex flex-col justify-end">
+                  <button
+                    onClick={() => {
+                      setStartDate("")
+                      setEndDate("")
+                      setSelectedCity("all")
+                    }}
+                    className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Page Views</span>
-                <div className="flex items-center space-x-4">
-                  <div className="w-64 bg-gray-700 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: "100%" }}></div>
-                  </div>
-                  <span className="text-white font-semibold w-12 text-right">{pageViews}</span>
-                </div>
+            {dailyAnalytics.length === 0 ? (
+              <div className="text-gray-400 text-center py-8">
+                No data available for the selected filters.
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Demo Requests</span>
-                <div className="flex items-center space-x-4">
-                  <div className="w-64 bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-yellow-500 h-2 rounded-full"
-                      style={{ width: `${pageViews > 0 ? (demoRequests / pageViews) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-white font-semibold w-12 text-right">{demoRequests}</span>
-                </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4 text-gray-300">Date</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Total Sessions</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Unique Visitors</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Conversions</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Conversion Rate</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dailyAnalytics.map((day) => (
+                      <tr key={day.date} className="border-b border-gray-800 hover:bg-gray-800/50">
+                        <td className="py-3 px-4 text-white font-medium">
+                          {new Date(day.date).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4 text-blue-400">{day.total_sessions}</td>
+                        <td className="py-3 px-4 text-green-400">{day.unique_visitors}</td>
+                        <td className="py-3 px-4 text-purple-400">{day.conversions}</td>
+                        <td className="py-3 px-4 text-yellow-400">{day.conversion_rate}%</td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => handleDayClick(day.date)}
+                            className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm text-white transition-colors"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Plan Selections</span>
-                <div className="flex items-center space-x-4">
-                  <div className="w-64 bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-purple-500 h-2 rounded-full"
-                      style={{ width: `${pageViews > 0 ? (planSelections / pageViews) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-white font-semibold w-12 text-right">{planSelections}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Signups</span>
-                <div className="flex items-center space-x-4">
-                  <div className="w-64 bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${pageViews > 0 ? (signups / pageViews) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-white font-semibold w-12 text-right">{signups}</span>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Plan Distribution & Revenue */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Plan Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Free Trial</span>
-                  <span className="text-white font-semibold">{planCounts.free || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Monthly ($5)</span>
-                  <span className="text-white font-semibold">{planCounts.monthly || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Annual ($30)</span>
-                  <span className="text-white font-semibold">{planCounts.annual || 0}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Revenue Estimate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Monthly Revenue</span>
-                  <span className="text-green-400 font-semibold">
-                    ${((planCounts.monthly || 0) * 5 + (planCounts.annual || 0) * 2.5).toFixed(0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Annual Revenue</span>
-                  <span className="text-green-400 font-semibold">
-                    ${((planCounts.monthly || 0) * 60 + (planCounts.annual || 0) * 30).toFixed(0)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Users */}
-        <Card className="bg-gray-900 border-gray-800">
+        {/* Recent Signups */}
+        <Card className="bg-gray-900 border-gray-800 mb-8">
           <CardHeader>
             <CardTitle className="text-white">Recent Signups</CardTitle>
+            <CardDescription className="text-gray-400">Latest user registrations</CardDescription>
           </CardHeader>
           <CardContent>
             {analytics.recentUsers.length === 0 ? (
@@ -275,6 +355,80 @@ export default function AnalyticsDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Day Details Table */}
+        {selectedDay && (
+          <Card className="bg-gray-900 border-gray-800 mb-8">
+            <CardHeader>
+              <CardTitle className="text-white">
+                User Details for {new Date(selectedDayDate).toLocaleDateString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                All users and visitors for this day
+              </CardDescription>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setSelectedDay(null)}
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm text-gray-300"
+                >
+                  Close
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4 text-gray-300">Name</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Email</th>
+                      <th className="text-left py-3 px-4 text-gray-300">City</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Time</th>
+                      <th className="text-left py-3 px-4 text-gray-300">IP Address</th>
+                      <th className="text-left py-3 px-4 text-gray-300">User Agent</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDay.map((session, index) => (
+                      <tr key={session.session_id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                        <td className="py-3 px-4 text-white">
+                          {session.users?.name || (session.converted ? "Converted User" : "Anonymous")}
+                        </td>
+                        <td className="py-3 px-4 text-gray-300">
+                          {session.users?.email || "—"}
+                        </td>
+                        <td className="py-3 px-4 text-gray-300">
+                          {session.city || "Unknown"}
+                        </td>
+                        <td className="py-3 px-4 text-gray-300">
+                          {new Date(session.first_seen).toLocaleTimeString()}
+                        </td>
+                        <td className="py-3 px-4 text-gray-300 font-mono text-sm">
+                          {session.ip_address || "127.0.0.1"}
+                        </td>
+                        <td className="py-3 px-4 text-gray-300 max-w-xs truncate" title={session.user_agent}>
+                          {session.device_info.browser} ({session.device_info.os})
+                        </td>
+                        <td className="py-3 px-4">
+                          {session.converted ? (
+                            <span className="px-2 py-1 bg-green-600 text-green-100 rounded text-xs">
+                              Converted
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-600 text-gray-300 rounded text-xs">
+                              Visitor
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

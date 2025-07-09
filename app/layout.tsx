@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { GoogleAnalytics } from "@/components/google-analytics"
+import { AnalyticsTracker } from "@/components/analytics-tracker"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -21,6 +22,7 @@ export default function RootLayout({
             {children}
             <Toaster />
             <GoogleAnalytics />
+            <AnalyticsTracker />
           </Suspense>
         </ThemeProvider>
       </body>

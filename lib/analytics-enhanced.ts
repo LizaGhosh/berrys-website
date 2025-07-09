@@ -23,11 +23,16 @@ export class EnhancedAnalytics {
   private async initializeSession() {
     if (typeof window === "undefined") return
 
-    await database.upsertSession({
+    // Get client IP and location data
+    const sessionData = {
       session_id: this.sessionId,
       user_agent: navigator.userAgent,
       referrer: document.referrer,
-    })
+    }
+
+    console.log("🔍 Creating session with data:", sessionData)
+
+    await database.upsertSession(sessionData)
   }
 
   async trackEvent(eventName: string, properties?: Record<string, any>) {

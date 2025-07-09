@@ -1,31 +1,72 @@
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
+
 export async function storeInDatabase(data: any) {
-  // This is a placeholder - replace with your actual database logic
-  console.log("Storing in database:", data)
+  console.log("🔍 Storing server-side analytics data:", data)
 
-  // Example using Supabase (uncomment to use)
-  // const { createClient } = require('@supabase/supabase-js');
-  // const supabaseUrl = process.env.SUPABASE_URL;
-  // const supabaseKey = process.env.SUPABASE_ANON_KEY;
-  // const supabase = createClient(supabaseUrl, supabaseKey);
-  // const { error } = await supabase.from('analytics').insert([data]);
-  // if (error) console.error("Supabase error:", error);
+  try {
+    // Store event data
+    if (data.event) {
+      // Don't create events without valid session IDs
+      if (!data.sessionId || data.sessionId === 'server') {
+        console.warn("⚠️ Skipping event - no valid session ID provided:", data.event)
+        return false
+      }
 
-  // Example using PlanetScale (uncomment to use)
-  // const mysql = require('mysql2/promise');
-  // const connection = await mysql.createConnection(process.env.DATABASE_URL);
-  // const [rows, fields] = await connection.execute('INSERT INTO analytics SET ?', [data]);
-  // console.log("PlanetScale result:", rows);
+      const { error: eventError } = await supabase.from('events').insert([{
+        session_id: data.sessionId,
+        event_name: data.event,
+        event_properties: data.properties,
+        page_url: data.url,
+        user_agent: data.userAgent,
+        ip_address: data.ip_address,
+        country: data.country,
+        city: data.city,
+        referrer: data.referrer,
+        server_timestamp: data.server_timestamp,
+        client_timestamp: data.timestamp,
+        app_version: data.version || "1.0.0",
+        deployment_id: data.deployment_id
+      }])
+      
+      if (eventError) {
+        console.error("Event storage error:", eventError)
+      } else {
+        console.log("✅ Event stored successfully")
+      }
 
-  // Example using Airtable (uncomment to use)
-  // const Airtable = require('airtable');
-  // const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY}).base(process.env.AIRTABLE_BASE_ID);
-  // base('Analytics').create(data, function(err: any, record: any) {
-  //   if (err) {
-  //     console.error(err);
-  //     return;
-  //   }
-  //   console.log("Airtable record:", record.getId());
-  // });
+      // Also update/create session with IP data
+      const { error: sessionError } = await supabase.from('sessions').upsert([{
+        session_id: data.sessionId,
+        ip_address: data.ip_address,
+        country: data.country,
+        city: data.city,
+        user_agent: data.userAgent,
+        referrer: data.referrer,
+        last_seen: data.server_timestamp || new Date().toISOString()
+      }], {
+        onConflict: 'session_id'
+      })
 
-  return Promise.resolve() // Indicate success even if not actually storing
+      if (sessionError) {
+        console.error("Session update error:", sessionError)
+      } else {
+        console.log("✅ Session updated with IP data")
+      }
+    }
+
+    return true
+  } catch (error) {
+    console.error("Database storage error:", error)
+    return false
+  }
+}
+
+export async function getAnalyticsData() {
+  // This function might be used elsewhere, keeping it as placeholder for now
+  console.log("getAnalyticsData called - using database.getAnalytics() instead")
+  return {}
 }

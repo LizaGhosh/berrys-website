@@ -5,6 +5,11 @@ export const trackEvent = (eventName: string, properties?: Record<string, any>) 
     ;(window as any).gtag("event", eventName, properties)
   }
 
+  // Get session ID from session storage (matches enhanced analytics)
+  const sessionId = typeof window !== "undefined" 
+    ? sessionStorage.getItem("analytics_session") 
+    : null
+
   // Also send to your database
   fetch("/api/analytics", {
     method: "POST",
@@ -15,6 +20,7 @@ export const trackEvent = (eventName: string, properties?: Record<string, any>) 
       timestamp: new Date().toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
+      sessionId: sessionId,
     }),
   }).catch(console.error)
 }
