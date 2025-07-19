@@ -14,8 +14,19 @@ import { analytics } from "@/lib/analytics-enhanced"
 
 // Calendly widget component
 const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const [calendlyKey, setCalendlyKey] = useState(0)
+
   useEffect(() => {
     if (isOpen) {
+      // Increment key to force remount
+      setCalendlyKey(prev => prev + 1)
+      
+      // Track Calendly widget opened
+      analytics.trackEvent("calendly_widget_opened", {
+        event_category: "engagement",
+        event_label: "demo_booking",
+      })
+      
       trackEvent("calendly_widget_opened", {
         event_category: "engagement",
         event_label: "demo_booking",
@@ -31,6 +42,17 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         script.async = true
         document.body.appendChild(script)
       }
+
+      // Force Calendly to re-initialize after a short delay
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).Calendly) {
+          // Force Calendly to re-initialize all widgets
+          (window as any).Calendly.initInlineWidget({
+            url: 'https://calendly.com/recruiter-berrys-ai/30min?primary_color=7c3aed&text_color=000000&background_color=ffffff',
+            parentElement: document.querySelector(`[key="${calendlyKey}"]`) || document.querySelector('.calendly-inline-widget')
+          })
+        }
+      }, 100)
 
       // Add keyboard support for Escape key
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -91,6 +113,7 @@ const CalendlyWidget = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         </div>
         <div className="flex-1 overflow-hidden p-2 sm:p-4">
           <div
+            key={calendlyKey}
             className="calendly-inline-widget w-full h-full"
             data-url="https://calendly.com/recruiter-berrys-ai/30min?primary_color=7c3aed&text_color=000000&background_color=ffffff"
             style={{ minWidth: "280px", height: "70vh", minHeight: "500px" }}
@@ -127,8 +150,14 @@ export default function HomePage() {
     setSelectedPlan(plan)
     setShowSignup(true)
 
-    // Track plan selection in database
-    analytics.trackEvent("plan_selected", {
+    // Track plan button click
+    analytics.trackButtonClick(`${plan}_plan_button`, {
+      plan: plan,
+      plan_type: plan,
+    })
+
+    // Track form start
+    analytics.trackFormStart(`${plan}_signup_form`, {
       plan: plan,
       plan_type: plan,
     })
@@ -145,6 +174,12 @@ export default function HomePage() {
     e.preventDefault()
 
     try {
+      // Track form completion
+      await analytics.trackFormComplete(`${selectedPlan}_signup_form`, {
+        plan: selectedPlan,
+        plan_type: selectedPlan,
+      })
+
       // Store user in database using enhanced analytics
       await analytics.trackSignup({
         name: formData.name,
@@ -180,8 +215,8 @@ export default function HomePage() {
   const handleBookCall = (source: string) => {
     setShowCalendly(true)
 
-    // Track demo request in database
-    analytics.trackEvent("demo_requested", {
+    // Track demo button click
+    analytics.trackButtonClick("demo_button", {
       source: source,
       button_location: source,
     })
@@ -203,21 +238,21 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-slate-950 text-white relative">
       {/* Header */}
-      <header className="border-b border-gray-800">
+      <header className="border-b border-slate-800/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center border border-slate-700/50">
                 <span className="text-white font-bold text-sm">B</span>
               </div>
-              <span className="text-xl font-semibold text-white">berrys.ai</span>
+              <span className="text-xl font-semibold text-slate-100">berrys.ai</span>
             </div>
             <nav className="hidden md:flex items-center space-x-8">
               <a
                 href="#features"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-slate-200 transition-colors duration-200"
                 onClick={() => {
                   trackEvent("nav_click", {
                     event_category: "navigation",
@@ -229,7 +264,7 @@ export default function HomePage() {
               </a>
               <a
                 href="#testimonials"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-slate-200 transition-colors duration-200"
                 onClick={() => {
                   trackEvent("nav_click", {
                     event_category: "navigation",
@@ -241,7 +276,7 @@ export default function HomePage() {
               </a>
               <a
                 href="#pricing"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-slate-200 transition-colors duration-200"
                 onClick={() => {
                   trackEvent("nav_click", {
                     event_category: "navigation",
@@ -253,7 +288,7 @@ export default function HomePage() {
               </a>
               <Button
                 onClick={() => handleBookCall("header")}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-100 px-4 py-2 rounded-lg border border-slate-700/50 transition-all duration-200 hover:shadow-lg hover:shadow-slate-900/20"
               >
                 Book Demo
               </Button>
@@ -263,26 +298,56 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Subtle background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-950 to-slate-900/30"></div>
+        
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          {/* Visual Status Indicator */}
           <div className="flex items-center justify-center mb-8">
-            <div className="flex items-center space-x-2 text-sm text-gray-400">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <div className="flex items-center space-x-2 text-sm text-slate-400 bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800/50 backdrop-blur-sm">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
               <span>AI co-pilot for founders</span>
             </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight">Perfect your pitch.</h1>
+          {/* Main Headline */}
+          <h1 className="text-5xl md:text-7xl font-bold text-slate-100 mb-4 leading-tight tracking-tight">Perfect your pitch.</h1>
+          
+          {/* Visual Process Flow */}
+          <div className="flex items-center justify-center space-x-4 mb-8 text-sm text-slate-400">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-slate-800/50 rounded-full flex items-center justify-center border border-slate-700/50">
+                <span className="text-slate-300 font-medium">1</span>
+              </div>
+              <span>Record or upload</span>
+            </div>
+            <div className="w-6 h-px bg-slate-700"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-slate-800/50 rounded-full flex items-center justify-center border border-slate-700/50">
+                <Brain className="w-4 h-4 text-slate-300" />
+              </div>
+              <span>AI analyzes</span>
+            </div>
+            <div className="w-6 h-px bg-slate-700"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-slate-800/50 rounded-full flex items-center justify-center border border-slate-700/50">
+                <TrendingUp className="w-4 h-4 text-slate-300" />
+              </div>
+              <span>Get feedback</span>
+            </div>
+          </div>
 
-          <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Get instant feedback on your presentation content, delivery, and style. berrys.ai is the AI co-pilot for
+          <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+            Get instant feedback on your pitch content, delivery, and style. berrys.ai is the AI co-pilot for
             founders.
           </p>
 
+          {/* Enhanced CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               onClick={() => handleBookCall("hero")}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-100 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto shadow-lg shadow-slate-900/25 border border-slate-700/50 transition-all duration-200 hover:shadow-xl hover:shadow-slate-900/30"
             >
               <span>Schedule a demo</span>
               <ArrowRight className="w-5 h-5" />
@@ -291,61 +356,57 @@ export default function HomePage() {
             <Button
               onClick={() => handlePlanSelect("free")}
               variant="outline"
-              className="border-gray-600 hover:border-purple-500 text-white hover:text-purple-300 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto"
+              className="border-2 border-emerald-800/60 hover:border-emerald-700/80 text-slate-200 hover:text-emerald-300 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto relative overflow-hidden group bg-slate-900/30 backdrop-blur-sm transition-all duration-200"
             >
-              <span>Start Free Trial</span>
-              <span className="text-sm text-gray-400 ml-2">2 months free</span>
+              <div className="absolute inset-0 bg-emerald-900/20 group-hover:bg-emerald-900/30 transition-colors duration-200"></div>
+              <div className="relative flex items-center space-x-2">
+                <span>Start Free Trial</span>
+                <div className="bg-emerald-600 text-slate-900 px-2 py-1 rounded text-xs font-bold">
+                  2 MONTHS FREE
+                </div>
+              </div>
             </Button>
           </div>
+
+
         </div>
       </section>
 
-      {/* Value Proposition */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 border-t border-gray-800">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">Transform your pitch with AI</h2>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            berrys.ai's real-time analysis and AI feedback helps founders identify weak points and transform their
-            presentations into funding magnets.
-          </p>
-        </div>
-      </section>
-
-      {/* Features Section */}
+      {/* Features Section - Elevated for First Page View */}
       <section
         id="features"
-        className="py-24 px-4 sm:px-6 lg:px-8 border-t border-gray-800"
+        className="py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800/50"
         onMouseEnter={() => handleSectionView("features")}
       >
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-12">
+          <div className="grid md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Brain className="w-8 h-8 text-purple-400" />
+              <div className="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-700/50">
+                <Brain className="w-6 h-6 text-slate-300" />
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">Content Intelligence</h3>
-              <p className="text-gray-400 leading-relaxed">
-                AI analyzes your pitch structure, messaging clarity, and storytelling flow for maximum investor impact.
+              <h3 className="text-lg font-semibold text-slate-200 mb-2">Content Intelligence</h3>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                AI analyzes your pitch structure, messaging clarity, and storytelling flow for maximum impact.
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <TrendingUp className="w-8 h-8 text-purple-400" />
+              <div className="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-700/50">
+                <TrendingUp className="w-6 h-6 text-slate-300" />
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">Delivery Mastery</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Real-time feedback on pacing, tone, and confidence levels to perfect your presentation style.
+              <h3 className="text-lg font-semibold text-slate-200 mb-2">Delivery Mastery</h3>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                Real-time feedback on pacing, tone, and confidence levels to perfect your pitch delivery.
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Target className="w-8 h-8 text-purple-400" />
+              <div className="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-700/50">
+                <Target className="w-6 h-6 text-slate-300" />
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">Instant Optimization</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Get actionable suggestions to immediately enhance your pitch and increase funding success.
+              <h3 className="text-lg font-semibold text-slate-200 mb-2">Instant Optimization</h3>
+              <p className="text-slate-400 leading-relaxed text-xs">
+                Get actionable suggestions to immediately enhance your pitch and increase success.
               </p>
             </div>
           </div>
@@ -353,149 +414,188 @@ export default function HomePage() {
       </section>
 
       {/* Demo Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 border-t border-gray-800">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 border-t border-slate-800/50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">How it works</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-100 mb-6 tracking-tight">How it works</h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
               See how berrys.ai analyzes pitches and provides detailed feedback to help founders improve
             </p>
           </div>
 
-          <div className="bg-gray-900 rounded-2xl p-8 md:p-12 border border-gray-800">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="bg-gray-800 rounded-xl overflow-hidden mb-6 border border-gray-700">
-                  <div className="aspect-video bg-gray-700 flex items-center justify-center relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-blue-600/20"></div>
-                    <div className="relative z-10 text-center">
-                      <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Play className="w-8 h-8 text-white ml-1" />
-                      </div>
-                      <p className="text-white font-medium">Demo Pitch Analysis</p>
-                      <p className="text-gray-300 text-sm">See how berrys.ai analyzes a real pitch</p>
-                    </div>
+          <div className="space-y-8">
+            {/* Video Section */}
+            <div className="bg-slate-900/30 rounded-lg p-8 border border-slate-800/50 backdrop-blur-sm">
+              <div className="max-w-4xl mx-auto">
+                <div className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50">
+                  <div className="aspect-video relative w-full">
+                    <iframe 
+                      className="absolute inset-0 w-full h-full"
+                      src="https://www.youtube.com/embed/7a_lu7ilpnI?start=100" 
+                      title="Best STARTUP PITCH ever. Silicon Valley." 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      referrerPolicy="strict-origin-when-cross-origin" 
+                      allowFullScreen
+                      onLoad={() => {
+                        analytics.trackEvent("video_loaded", {
+                          video_source: "youtube",
+                          video_title: "Best STARTUP PITCH ever. Silicon Valley."
+                        })
+                      }}
+                    ></iframe>
                   </div>
                 </div>
 
-                <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                  <h4 className="text-white font-semibold mb-3">Sample Pitch: BlipMate</h4>
-                  <div className="text-gray-300 text-sm leading-relaxed space-y-2">
-                    <p>"Hi, I'm Liza, co-founder of BlipMate.</p>
-                    <p>Every week, teams waste hours rehashing meetings—who said what, who's doing what next.</p>
-                    <p>
-                      BlipMate solves that by using AI to join your meetings, summarize discussions in real time, and
-                      send action items directly to Slack or email.
-                    </p>
-                    <p>
-                      In just 4 weeks, 25 teams have joined our beta, with a 90% retention rate. One founder told us
-                      it's like having a Chief of Staff on every call.
-                    </p>
-                    <p>
-                      We're now raising a pre-seed round to expand our integrations and bring BlipMate to more remote
-                      teams."
-                    </p>
-                  </div>
-                </div>
+
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-white">Voice Analysis</h4>
-                    <span className="text-purple-400 text-sm">3 categories</span>
+            {/* Analysis Section */}
+            <div className="bg-slate-900/30 rounded-lg p-8 border border-slate-800/50 backdrop-blur-sm">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <h3 className="text-2xl font-bold text-slate-100 mb-2">AI Analysis Results</h3>
+                  <p className="text-slate-400">Detailed feedback on voice, content, and body language</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-slate-200 text-lg">Voice Analysis</h4>
+                      <div className="text-slate-400 text-sm">Overall: 8.0/10</div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-300 text-sm font-medium">Volume</span>
+                          <span className="text-emerald-400 font-semibold">7.5/10</span>
+                        </div>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                          Good projection and clear articulation. Maintains consistent volume throughout.
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-300 text-sm font-medium">Pace</span>
+                          <span className="text-emerald-400 font-semibold">8.5/10</span>
+                        </div>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                          Excellent pacing with strategic pauses. Good use of silence for emphasis.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-1">
-                          <span className="text-gray-300 text-sm font-medium">Volume</span>
-                          <span className="ml-auto text-green-400 font-semibold">8.0</span>
-                        </div>
-                        <p className="text-gray-400 text-xs">
-                          Audible and clear, comes across confident but not forceful.
+                  <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-slate-200 text-lg">Content Structure</h4>
+                      <span className="text-emerald-400 font-semibold">9.5/10</span>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
+                        <p className="text-slate-400 text-sm leading-relaxed mb-3">
+                          Perfect problem → solution → market → traction → ask flow. Strong market size presentation. Excellent use of social proof and traction metrics. Clear ask with specific funding amount.
                         </p>
-                        <p className="text-purple-300 text-xs mt-1">
-                          💡 Add slight projection on key phrases like 'real time' and 'AI'...
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start space-x-2">
+                            <span className="text-amber-300 text-sm">💡</span>
+                            <p className="text-amber-300 text-sm">
+                              Could add more specific competitive advantages, e.g., "Our proprietary AI algorithm processes data 3x faster than competitors"
+                            </p>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <span className="text-amber-300 text-sm">💡</span>
+                            <p className="text-amber-300 text-sm">
+                              Might benefit from a one-line vision statement, e.g., "We're building the future of AI-powered productivity"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-slate-200 text-lg">Body Language</h4>
+                      <div className="text-slate-400 text-sm">Overall: 8.5/10</div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-300 text-sm font-medium">Eye Contact</span>
+                          <span className="text-emerald-400 font-semibold">8.5/10</span>
+                        </div>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                          Maintains strong, confident eye contact. Good engagement with audience.
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-slate-300 text-sm font-medium">Gestures</span>
+                          <span className="text-emerald-400 font-semibold">8.0/10</span>
+                        </div>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                          Uses purposeful hand gestures to emphasize points. Good use of space and movement.
                         </p>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-1">
-                          <span className="text-gray-300 text-sm font-medium">Pace</span>
-                          <span className="ml-auto text-green-400 font-semibold">8.0</span>
-                        </div>
-                        <p className="text-gray-400 text-xs">
-                          Good pacing due to short sentences, but lacks strategic pauses.
-                        </p>
-                        <p className="text-purple-300 text-xs mt-1">
-                          💡 Insert pauses after major phrases like 'Chief of Staff'...
-                        </p>
-                      </div>
+                  <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-slate-200 text-lg">Summary</h4>
+                      <div className="text-emerald-400 text-sm">Strong Performance</div>
                     </div>
 
-                    <div className="text-center">
-                      <span className="text-gray-500 text-xs">...</span>
+                    <div className="space-y-4">
+                      <div>
+                        <h5 className="text-slate-300 text-sm font-medium mb-2">Key Strengths</h5>
+                        <div className="space-y-2">
+                          <div className="flex items-start space-x-2">
+                            <span className="text-emerald-400 text-sm">✓</span>
+                            <p className="text-slate-400 text-sm">Perfect pitch structure & strong opening hook</p>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <span className="text-emerald-400 text-sm">✓</span>
+                            <p className="text-slate-400 text-sm">Clear value proposition & excellent data usage</p>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <span className="text-emerald-400 text-sm">✓</span>
+                            <p className="text-slate-400 text-sm">Confident delivery with strategic pauses</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h5 className="text-slate-300 text-sm font-medium mb-2">Areas for Improvement</h5>
+                        <div className="space-y-2">
+                          <div className="flex items-start space-x-2">
+                            <span className="text-amber-400 text-sm">💡</span>
+                            <p className="text-slate-400 text-sm">Add specific competitive advantages & vision statement</p>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <span className="text-amber-400 text-sm">💡</span>
+                            <p className="text-slate-400 text-sm">Include more use cases or customer testimonials</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-white">Content Structure</h4>
-                    <span className="text-green-400 font-semibold">9.0</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-gray-400 text-xs">Logical flow: problem → solution → traction → quote → ask.</p>
-                    <p className="text-purple-300 text-xs">
-                      💡 Add a one-line vision to hint at scale, e.g., 'making meetings 10x more efficient.'
-                    </p>
-
-                    <div className="text-center mt-3">
-                      <span className="text-gray-500 text-xs">...</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-white">Body Language</h4>
-                    <span className="text-yellow-400 text-sm">3 categories</span>
-                  </div>
-
-                  <div className="space-y-3 flex-1">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-1">
-                          <span className="text-gray-300 text-sm font-medium">Eye Contact</span>
-                          <span className="ml-auto text-yellow-400 font-semibold">6.0</span>
-                        </div>
-                        <p className="text-gray-400 text-xs">
-                          May break contact at transitions or rely on memory aids.
-                        </p>
-                        <p className="text-purple-300 text-xs mt-1">
-                          💡 Practice keeping eye contact during transitions. Anchor gaze when delivering value
-                          points...
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-center flex-1 flex items-end justify-center">
-                      <span className="text-gray-500 text-xs">...</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center mt-4">
-                  <div className="flex items-center justify-center space-x-2 text-gray-500">
-                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                    <span className="text-xs ml-2">8 more categories analyzed</span>
+                <div className="text-center mt-8">
+                  <div className="flex items-center justify-center space-x-2 text-slate-500">
+                    <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                    <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                    <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                    <span className="text-sm ml-2">8 more categories analyzed</span>
                   </div>
                 </div>
               </div>
@@ -507,82 +607,82 @@ export default function HomePage() {
       {/* Testimonials Section */}
       <section
         id="testimonials"
-        className="py-24 px-4 sm:px-6 lg:px-8 border-t border-gray-800"
+        className="py-20 px-4 sm:px-6 lg:px-8 border-t border-slate-800/50"
         onMouseEnter={() => handleSectionView("testimonials")}
       >
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Loved by founders</h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              See how berrys.ai has helped founders secure millions in funding
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-100 mb-6 tracking-tight">Loved by founders</h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+              See how berrys.ai has helped founders close deals and secure partnerships
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-slate-900/30 border-slate-800/50 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                    <Star key={i} className="w-4 h-4 text-amber-400 fill-current" />
                   ))}
                 </div>
-                <blockquote className="text-gray-300 mb-6 leading-relaxed">
+                <blockquote className="text-slate-300 mb-6 leading-relaxed">
                   "berrys.ai helped me restructure my entire pitch flow. I was jumping between problem and solution
                   randomly—now I follow a logical narrative that investors actually follow. My ask is 3x clearer."
                 </blockquote>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold text-sm">SM</span>
+                  <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-slate-200 font-semibold text-sm">SM</span>
                   </div>
                   <div>
-                    <div className="font-semibold text-white">S.M.</div>
-                    <div className="text-gray-400 text-sm">Tech startup founder, San Francisco</div>
+                    <div className="font-semibold text-slate-200">S.M.</div>
+                    <div className="text-slate-400 text-sm">Tech startup founder, San Francisco</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-slate-900/30 border-slate-800/50 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                    <Star key={i} className="w-4 h-4 text-amber-400 fill-current" />
                   ))}
                 </div>
-                <blockquote className="text-gray-300 mb-6 leading-relaxed">
+                <blockquote className="text-slate-300 mb-6 leading-relaxed">
                   "I was focusing on technical features instead of business impact. berrys.ai taught me to lead with
                   outcomes investors care about—revenue potential, market size, competitive advantage."
                 </blockquote>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold text-sm">MR</span>
+                  <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-slate-200 font-semibold text-sm">MR</span>
                   </div>
                   <div>
-                    <div className="font-semibold text-white">M.R.</div>
-                    <div className="text-gray-400 text-sm">B2B SaaS founder, Austin</div>
+                    <div className="font-semibold text-slate-200">M.R.</div>
+                    <div className="text-slate-400 text-sm">B2B SaaS founder, Austin</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-slate-900/30 border-slate-800/50 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                    <Star key={i} className="w-4 h-4 text-amber-400 fill-current" />
                   ))}
                 </div>
-                <blockquote className="text-gray-300 mb-6 leading-relaxed">
+                <blockquote className="text-slate-300 mb-6 leading-relaxed">
                   "My delivery was too rushed and monotone. The AI caught vocal patterns I never noticed—now I use
                   strategic pauses and vary my tone to emphasize key points. Much more engaging."
                 </blockquote>
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold text-sm">AL</span>
+                  <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-slate-200 font-semibold text-sm">AL</span>
                   </div>
                   <div>
-                    <div className="font-semibold text-white">A.L.</div>
-                    <div className="text-gray-400 text-sm">Fintech co-founder, New York</div>
+                    <div className="font-semibold text-slate-200">A.L.</div>
+                    <div className="text-slate-400 text-sm">Fintech co-founder, New York</div>
                   </div>
                 </div>
               </CardContent>
@@ -590,22 +690,19 @@ export default function HomePage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mt-16 text-center">
             <div>
-              <div className="text-3xl font-bold text-white mb-2">500+</div>
-              <div className="text-gray-400">Founders Helped</div>
+              <div className="text-3xl font-bold text-slate-100 mb-2">100+</div>
+              <div className="text-slate-400">Founders Helped</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-white mb-2">$50M+</div>
-              <div className="text-gray-400">Funding Raised</div>
+              <div className="text-3xl font-bold text-slate-100 mb-2">$50M+</div>
+              <div className="text-slate-400">Funding Raised</div>
             </div>
+
             <div>
-              <div className="text-3xl font-bold text-white mb-2">95%</div>
-              <div className="text-gray-400">Success Rate</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-white mb-2">4.9/5</div>
-              <div className="text-gray-400">User Rating</div>
+              <div className="text-3xl font-bold text-slate-100 mb-2">4.9/5</div>
+              <div className="text-slate-400">User Rating</div>
             </div>
           </div>
         </div>
@@ -614,145 +711,217 @@ export default function HomePage() {
       {/* Pricing Section */}
       <section
         id="pricing"
-        className="py-24 px-4 sm:px-6 lg:px-8 border-t border-gray-800"
+        className="py-20 px-4 sm:px-6 lg:px-8 border-t border-slate-800/50"
         onMouseEnter={() => handleSectionView("pricing")}
       >
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Simple pricing</h2>
-            <p className="text-xl text-gray-400">Start free, then choose the plan that works for you</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-100 mb-6 tracking-tight">Simple pricing</h2>
+            <p className="text-xl text-slate-400">Start free, then choose the plan that works for you</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Free Trial */}
-            <Card className="bg-gray-900 border-gray-800 relative">
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="text-xl font-semibold text-white">Free Trial</CardTitle>
-                <CardDescription className="text-gray-400">Perfect for getting started</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-white">Free</span>
-                  <span className="text-gray-400 ml-2">for 2 months</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Unlimited pitch analysis</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">AI feedback on content & delivery</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Basic improvement suggestions</span>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-6">
-                <Button
-                  className="w-full bg-gray-800 hover:bg-gray-700 text-white"
-                  onClick={() => handlePlanSelect("free")}
-                >
-                  Start Free Trial
-                </Button>
-              </CardFooter>
-            </Card>
-
-            {/* Monthly Plan */}
-            <Card className="bg-gray-900 border-purple-600 relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-purple-600 text-white px-3 py-1 text-xs">Most Popular</Badge>
+          {/* Pricing Table */}
+          <div className="mt-8">
+            {/* Header badges with proper spacing */}
+            <div className="flex justify-between items-center mb-4 px-4">
+              <div className="flex-1"></div>
+              <div className="flex-1 text-center">
+                <Badge className="bg-emerald-600 text-slate-900 px-3 py-1 text-xs font-bold shadow-lg">
+                  🎉 LIMITED TIME
+                </Badge>
               </div>
-              <CardHeader className="text-center pb-6 pt-8">
-                <CardTitle className="text-xl font-semibold text-white">Monthly</CardTitle>
-                <CardDescription className="text-gray-400">For regular pitch practice</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-white">$5</span>
-                  <span className="text-gray-400 ml-2">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Everything in Free Trial</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Advanced analytics dashboard</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Progress tracking over time</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Priority support</span>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-6">
-                <Button
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  onClick={() => handlePlanSelect("monthly")}
-                >
-                  Choose Monthly
-                </Button>
-              </CardFooter>
-            </Card>
-
-            {/* Annual Plan */}
-            <Card className="bg-gray-900 border-gray-800 relative">
-              <div className="absolute -top-3 right-4">
-                <Badge className="bg-green-600 text-white px-2 py-1 text-xs">Save 50%</Badge>
+              <div className="flex-1 text-center">
+                <Badge className="bg-slate-700 text-slate-200 px-3 py-1 text-xs border border-slate-600">
+                  Most Popular
+                </Badge>
               </div>
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="text-xl font-semibold text-white">Annual</CardTitle>
-                <CardDescription className="text-gray-400">Best value for serious founders</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-white">$30</span>
-                  <span className="text-gray-400 ml-2">/year</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Everything in Monthly</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Exclusive pitch templates</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">1-on-1 coaching session</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-400 mr-3 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">Early access to new features</span>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-6">
-                <Button
-                  className="w-full bg-gray-800 hover:bg-gray-700 text-white"
-                  onClick={() => handlePlanSelect("annual")}
-                >
-                  Choose Annual
-                </Button>
-              </CardFooter>
-            </Card>
+              <div className="flex-1 text-center">
+                <Badge className="bg-emerald-600 text-slate-900 px-2 py-1 text-xs font-bold">
+                  Save 50%
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="bg-slate-900/30 rounded-lg border border-slate-800/50 backdrop-blur-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="text-left p-6 text-slate-200 font-semibold">Features</th>
+                      <th className="text-center p-6">
+                        <div className="text-slate-100 font-semibold text-lg">Free Trial</div>
+                        <div className="text-slate-400 text-sm">Perfect for getting started</div>
+                        <div className="mt-2 flex items-center justify-center space-x-2">
+                          <span className="text-2xl font-bold text-slate-100">Free</span>
+                          <div className="bg-emerald-600 text-slate-900 px-2 py-1 rounded text-xs font-bold">
+                            2 MONTHS
+                          </div>
+                        </div>
+                        <div className="text-emerald-400 text-xs mt-1">No credit card required</div>
+                      </th>
+                      <th className="text-center p-6">
+                        <div className="text-slate-100 font-semibold text-lg">Monthly</div>
+                        <div className="text-slate-400 text-sm">For regular pitch practice</div>
+                        <div className="mt-2">
+                          <span className="text-2xl font-bold text-slate-100">$5</span>
+                          <span className="text-slate-400 text-sm">/month</span>
+                        </div>
+                      </th>
+                      <th className="text-center p-6">
+                        <div className="text-slate-100 font-semibold text-lg">Annual</div>
+                        <div className="text-slate-400 text-sm">Best Value</div>
+                        <div className="mt-2">
+                          <span className="text-2xl font-bold text-slate-100">$30</span>
+                          <span className="text-slate-400 text-sm">/year</span>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Unlimited pitch analysis</td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">AI feedback on content & delivery</td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Live recording or file upload</td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Basic improvement suggestions</td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Advanced analytics dashboard</td>
+                    <td className="p-4 text-center">
+                      <span className="text-slate-500">—</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Progress tracking over time</td>
+                    <td className="p-4 text-center">
+                      <span className="text-slate-500">—</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Exclusive pitch templates</td>
+                    <td className="p-4 text-center">
+                      <span className="text-slate-500">—</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-slate-500">—</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-800/20 transition-colors">
+                    <td className="p-4 text-slate-300 font-medium">Early access to new features</td>
+                    <td className="p-4 text-center">
+                      <span className="text-slate-500">—</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-slate-500">—</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot className="bg-slate-800/30">
+                  <tr>
+                    <td className="p-4"></td>
+                    <td className="p-4 text-center">
+                      <Button
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-slate-900 font-semibold shadow-lg hover:shadow-emerald-500/25 transition-all duration-200"
+                        onClick={() => handlePlanSelect("free")}
+                      >
+                        Start 2-Month Free Trial
+                      </Button>
+                    </td>
+                    <td className="p-4 text-center">
+                      <Button
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-slate-100 transition-all duration-200 border border-slate-600/50"
+                        onClick={() => handlePlanSelect("monthly")}
+                      >
+                        Choose Monthly
+                      </Button>
+                    </td>
+                    <td className="p-4 text-center">
+                      <Button
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700/50 transition-all duration-200"
+                        onClick={() => handlePlanSelect("annual")}
+                      >
+                        Choose Annual
+                      </Button>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
         </div>
+      </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="border-t border-slate-800/50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-3 mb-6">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center border border-slate-700/50">
               <span className="text-white font-bold text-sm">B</span>
             </div>
-            <span className="text-xl font-semibold text-white">berrys.ai</span>
+            <span className="text-xl font-semibold text-slate-100">berrys.ai</span>
           </div>
-          <p className="text-gray-400">© 2024 berrys.ai. All rights reserved.</p>
+          <p className="text-slate-400">© 2024 berrys.ai. All rights reserved.</p>
         </div>
       </footer>
 
@@ -761,54 +930,62 @@ export default function HomePage() {
 
       {/* Signup Modal */}
       <Dialog open={showSignup} onOpenChange={setShowSignup}>
-        <DialogContent className="sm:max-w-md bg-gray-900 border-gray-800">
+        <DialogContent className="sm:max-w-md bg-slate-900 border-slate-800">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-white">Join berrys.ai</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              {selectedPlan === "free" && "Start your free 2-month trial"}
+            <DialogTitle className="text-xl font-semibold text-slate-100">Join berrys.ai</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {selectedPlan === "free" && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span>Start your</span>
+                    <Badge className="bg-emerald-600 text-slate-900 px-2 py-1 text-xs font-bold">2-MONTH FREE TRIAL</Badge>
+                  </div>
+                  <p className="text-sm text-emerald-400">No credit card required • Cancel anytime</p>
+                </div>
+              )}
               {selectedPlan === "monthly" && "Subscribe to Monthly Plan - $5/month"}
               {selectedPlan === "annual" && "Subscribe to Annual Plan - $30/year"}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-300">
+              <Label htmlFor="name" className="text-sm font-medium text-slate-300">
                 Full Name
               </Label>
               <Input
                 id="name"
-                className="mt-1 bg-gray-800 border-gray-700 text-white"
+                className="mt-1 bg-slate-800 border-slate-700 text-slate-100"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="city" className="text-sm font-medium text-gray-300">
+              <Label htmlFor="city" className="text-sm font-medium text-slate-300">
                 City
               </Label>
               <Input
                 id="city"
-                className="mt-1 bg-gray-800 border-gray-700 text-white"
+                className="mt-1 bg-slate-800 border-slate-700 text-slate-100"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="email" className="text-sm font-medium text-gray-300">
+              <Label htmlFor="email" className="text-sm font-medium text-slate-300">
                 Email
               </Label>
               <Input
                 id="email"
                 type="email"
-                className="mt-1 bg-gray-800 border-gray-700 text-white"
+                className="mt-1 bg-slate-800 border-slate-700 text-slate-100"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2">
+            <Button type="submit" className="w-full bg-slate-700 hover:bg-slate-600 text-slate-100 py-2">
               Continue
             </Button>
           </form>
@@ -817,13 +994,13 @@ export default function HomePage() {
 
       {/* Welcome Modal */}
       <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
-        <DialogContent className="sm:max-w-md bg-gray-900 border-gray-800 text-center">
+        <DialogContent className="sm:max-w-md bg-slate-900 border-slate-800 text-center">
           <DialogHeader>
-            <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-emerald-400" />
             </div>
-            <DialogTitle className="text-2xl font-semibold text-white">Welcome to berrys.ai!</DialogTitle>
-            <DialogDescription className="text-gray-400 leading-relaxed mt-4">
+            <DialogTitle className="text-2xl font-semibold text-slate-100">Welcome to berrys.ai!</DialogTitle>
+            <DialogDescription className="text-slate-400 leading-relaxed mt-4">
               Thank you for your interest! We're currently working on scaling our product and would be delighted to
               welcome you as one of our early users.
               <br />
@@ -833,7 +1010,7 @@ export default function HomePage() {
           </DialogHeader>
           <Button
             onClick={() => setShowWelcome(false)}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 mt-4"
+            className="w-full bg-slate-700 hover:bg-slate-600 text-slate-100 py-2 mt-4"
           >
             Got it!
           </Button>

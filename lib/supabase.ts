@@ -150,14 +150,34 @@ export const database = {
       .from("users")
       .select("created_at, city, id")
 
-    // Apply date filters to both queries
+    // Apply date filters to both queries with timezone awareness
     if (startDate) {
-      sessionsQuery = sessionsQuery.gte("first_seen", `${startDate}T00:00:00.000Z`)
-      usersQuery = usersQuery.gte("created_at", `${startDate}T00:00:00.000Z`)
+      // Convert local date to UTC range that covers the entire local day
+      // For PDT (UTC-7), July 12th local = July 12th 07:00 UTC to July 13th 06:59 UTC
+      const timezoneOffset = new Date().getTimezoneOffset() // minutes
+      const startDateUTC = new Date(`${startDate}T00:00:00`)
+      startDateUTC.setMinutes(startDateUTC.getMinutes() + timezoneOffset)
+      
+      console.log(`🔍 TIMEZONE DEBUG:`)
+      console.log(`   - Input date: ${startDate}`)
+      console.log(`   - Timezone offset: ${timezoneOffset} minutes (${timezoneOffset/60} hours)`)
+      console.log(`   - Local start: ${startDate}T00:00:00`)
+      console.log(`   - UTC start: ${startDateUTC.toISOString()}`)
+      console.log(`   - Current timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`)
+      
+      sessionsQuery = sessionsQuery.gte("first_seen", startDateUTC.toISOString())
+      usersQuery = usersQuery.gte("created_at", startDateUTC.toISOString())
     }
     if (endDate) {
-      sessionsQuery = sessionsQuery.lte("first_seen", `${endDate}T23:59:59.999Z`)
-      usersQuery = usersQuery.lte("created_at", `${endDate}T23:59:59.999Z`)
+      // End of day in local timezone
+      const timezoneOffset = new Date().getTimezoneOffset() // minutes  
+      const endDateUTC = new Date(`${endDate}T23:59:59.999`)
+      endDateUTC.setMinutes(endDateUTC.getMinutes() + timezoneOffset)
+      
+      console.log(`🔍 Date filter - End: ${endDate} local → ${endDateUTC.toISOString()} UTC`)
+      
+      sessionsQuery = sessionsQuery.lte("first_seen", endDateUTC.toISOString())
+      usersQuery = usersQuery.lte("created_at", endDateUTC.toISOString())
     }
 
     // Apply city filter (case insensitive)
@@ -183,8 +203,22 @@ export const database = {
     const dailyStats: Record<string, any> = {}
 
     // Process sessions (visitors)
-    sessions.forEach(session => {
-      const date = new Date(session.first_seen).toISOString().split('T')[0]
+    sessions.forEach((session, index) => {
+      // Use local timezone instead of UTC to prevent date shifting
+      const sessionDate = new Date(session.first_seen)
+      const date = sessionDate.getFullYear() + '-' + 
+                   String(sessionDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(sessionDate.getDate()).padStart(2, '0')
+      
+      // Debug first few sessions
+      if (index < 3) {
+        console.log(`📊 Session ${index + 1}:`)
+        console.log(`   - Raw DB timestamp: ${session.first_seen}`)
+        console.log(`   - Parsed as Date: ${sessionDate.toISOString()}`)
+        console.log(`   - Local time: ${sessionDate.toLocaleString()}`)
+        console.log(`   - Generated date key: ${date}`)
+        console.log(`   - Session ID: ${session.session_id}`)
+      }
       
       if (!dailyStats[date]) {
         dailyStats[date] = {
@@ -205,7 +239,11 @@ export const database = {
 
     // Process user signups (actual conversions by signup date)
     users.forEach(user => {
-      const date = new Date(user.created_at).toISOString().split('T')[0]
+      // Use local timezone instead of UTC to prevent date shifting
+      const signupDate = new Date(user.created_at)
+      const date = signupDate.getFullYear() + '-' + 
+                   String(signupDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(signupDate.getDate()).padStart(2, '0')
       
       if (!dailyStats[date]) {
         dailyStats[date] = {
@@ -234,6 +272,14 @@ export const database = {
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 30)
 
+    console.log(`📈 FINAL RESULTS:`)
+    console.log(`   - Total days: ${result.length}`)
+    result.forEach((day, index) => {
+      if (index < 5) {
+        console.log(`   - Day ${index + 1}: ${day.date} (${day.total_sessions} sessions, ${day.unique_visitors} visitors)`)
+      }
+    })
+    
     return result
   },
 
@@ -267,6 +313,14 @@ export const database = {
 
   // Get detailed logs for a specific day
   async getDayDetails(date: string) {
+    // Convert local date to UTC range that covers the entire local day
+    const timezoneOffset = new Date().getTimezoneOffset() // minutes
+    const startDateUTC = new Date(`${date}T00:00:00`)
+    startDateUTC.setMinutes(startDateUTC.getMinutes() + timezoneOffset)
+    
+    const endDateUTC = new Date(`${date}T23:59:59.999`)
+    endDateUTC.setMinutes(endDateUTC.getMinutes() + timezoneOffset)
+    
     // Get all sessions for that day AND users who signed up that day
     const [sessionsResult, usersResult] = await Promise.all([
       // Sessions created on this day
@@ -281,8 +335,8 @@ export const database = {
             created_at
           )
         `)
-        .gte("first_seen", `${date}T00:00:00.000Z`)
-        .lt("first_seen", `${date}T23:59:59.999Z`)
+        .gte("first_seen", startDateUTC.toISOString())
+        .lt("first_seen", endDateUTC.toISOString())
         .order("first_seen", { ascending: false }),
       
       // Users who signed up on this day (might have sessions from earlier)
@@ -299,11 +353,27 @@ export const database = {
             city,
             user_agent,
             converted,
-            conversion_plan
+            conversion_plan,
+            ip_country,
+            ip_country_code,
+            ip_region,
+            ip_region_name,
+            ip_city,
+            ip_postal_code,
+            ip_latitude,
+            ip_longitude,
+            ip_timezone,
+            ip_isp,
+            ip_organization,
+            ip_connection_type,
+            ip_is_mobile,
+            ip_is_proxy,
+            ip_is_hosting,
+            ip_location_source
           )
         `)
-        .gte("created_at", `${date}T00:00:00.000Z`)
-        .lt("created_at", `${date}T23:59:59.999Z`)
+        .gte("created_at", startDateUTC.toISOString())
+        .lt("created_at", endDateUTC.toISOString())
         .order("created_at", { ascending: false })
     ])
 
@@ -321,6 +391,23 @@ export const database = {
       user_agent: user.sessions.user_agent,
       converted: true, // User signups are always converted
       conversion_plan: user.selected_plan,
+      // IP-based location fields
+      ip_country: user.sessions.ip_country,
+      ip_country_code: user.sessions.ip_country_code,
+      ip_region: user.sessions.ip_region,
+      ip_region_name: user.sessions.ip_region_name,
+      ip_city: user.sessions.ip_city,
+      ip_postal_code: user.sessions.ip_postal_code,
+      ip_latitude: user.sessions.ip_latitude,
+      ip_longitude: user.sessions.ip_longitude,
+      ip_timezone: user.sessions.ip_timezone,
+      ip_isp: user.sessions.ip_isp,
+      ip_organization: user.sessions.ip_organization,
+      ip_connection_type: user.sessions.ip_connection_type,
+      ip_is_mobile: user.sessions.ip_is_mobile,
+      ip_is_proxy: user.sessions.ip_is_proxy,
+      ip_is_hosting: user.sessions.ip_is_hosting,
+      ip_location_source: user.sessions.ip_location_source,
       users: {
         name: user.name,
         email: user.email,
@@ -353,19 +440,23 @@ export const database = {
 
   // Helper function to parse user agent for device info
   parseUserAgent(userAgent: string) {
-    if (!userAgent) return { browser: "Unknown", os: "Unknown", device: "Unknown" }
+    if (!userAgent) return { 
+      browser: "Browser Not Detected", 
+      os: "Operating System Not Detected", 
+      device: "Device Type Not Detected" 
+    }
     
     // Simple user agent parsing (you could use a library like ua-parser-js for more accuracy)
     const browser = userAgent.includes("Chrome") ? "Chrome" :
                    userAgent.includes("Firefox") ? "Firefox" :
                    userAgent.includes("Safari") ? "Safari" :
-                   userAgent.includes("Edge") ? "Edge" : "Unknown"
+                   userAgent.includes("Edge") ? "Edge" : "Browser Not Recognized"
     
     const os = userAgent.includes("Windows") ? "Windows" :
               userAgent.includes("Mac") ? "macOS" :
               userAgent.includes("Linux") ? "Linux" :
               userAgent.includes("Android") ? "Android" :
-              userAgent.includes("iOS") ? "iOS" : "Unknown"
+              userAgent.includes("iOS") ? "iOS" : "OS Not Recognized"
     
     const device = userAgent.includes("Mobile") ? "Mobile" :
                   userAgent.includes("Tablet") ? "Tablet" : "Desktop"

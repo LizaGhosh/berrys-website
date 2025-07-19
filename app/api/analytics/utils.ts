@@ -23,8 +23,26 @@ export async function storeInDatabase(data: any) {
         page_url: data.url,
         user_agent: data.userAgent,
         ip_address: data.ip_address,
+        // Keep existing fields for backward compatibility
         country: data.country,
         city: data.city,
+        // IP-based location fields (separate from user-provided location)
+        ip_country: data.ip_country,
+        ip_country_code: data.ip_country_code,
+        ip_region: data.ip_region,
+        ip_region_name: data.ip_region_name,
+        ip_city: data.ip_city,
+        ip_postal_code: data.ip_postal_code,
+        ip_latitude: data.ip_latitude,
+        ip_longitude: data.ip_longitude,
+        ip_timezone: data.ip_timezone,
+        ip_isp: data.ip_isp,
+        ip_organization: data.ip_organization,
+        ip_connection_type: data.ip_connection_type,
+        ip_is_mobile: data.ip_is_mobile,
+        ip_is_proxy: data.ip_is_proxy,
+        ip_is_hosting: data.ip_is_hosting,
+        ip_location_source: data.ip_location_source,
         referrer: data.referrer,
         server_timestamp: data.server_timestamp,
         client_timestamp: data.timestamp,
@@ -38,12 +56,30 @@ export async function storeInDatabase(data: any) {
         console.log("✅ Event stored successfully")
       }
 
-      // Also update/create session with IP data
+      // Also update/create session with enhanced IP data
       const { error: sessionError } = await supabase.from('sessions').upsert([{
         session_id: data.sessionId,
         ip_address: data.ip_address,
+        // Keep existing fields for backward compatibility (will be used for user-provided location)
         country: data.country,
         city: data.city,
+        // IP-based location fields (separate from user-provided location)
+        ip_country: data.ip_country,
+        ip_country_code: data.ip_country_code,
+        ip_region: data.ip_region,
+        ip_region_name: data.ip_region_name,
+        ip_city: data.ip_city,
+        ip_postal_code: data.ip_postal_code,
+        ip_latitude: data.ip_latitude,
+        ip_longitude: data.ip_longitude,
+        ip_timezone: data.ip_timezone,
+        ip_isp: data.ip_isp,
+        ip_organization: data.ip_organization,
+        ip_connection_type: data.ip_connection_type,
+        ip_is_mobile: data.ip_is_mobile,
+        ip_is_proxy: data.ip_is_proxy,
+        ip_is_hosting: data.ip_is_hosting,
+        ip_location_source: data.ip_location_source,
         user_agent: data.userAgent,
         referrer: data.referrer,
         last_seen: data.server_timestamp || new Date().toISOString()

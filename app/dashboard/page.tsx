@@ -1,434 +1,539 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { database } from "@/lib/supabase"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { 
+  Users, 
+  MousePointer, 
+  Scroll, 
+  Clock, 
+  TrendingUp, 
+  Calendar,
+  Play,
+  CheckCircle,
+  XCircle,
+  ArrowUpRight,
+  ArrowDownRight
+} from "lucide-react"
 
 interface AnalyticsData {
-  totalUsers: number
-  uniqueVisitors: number
-  funnelData: any[]
-  planData: any[]
-  recentUsers: any[]
+  totalVisitors: number
+  earlyExits: number
+  scrollDepth: {
+    hero: number
+    features: number
+    howItWorks: number
+    testimonials: number
+    pricing: number
+  }
+  buttonClicks: {
+    demoButton: number
+    freeTrial: number
+    monthlyPlan: number
+    annualPlan: number
+  }
+  formInteractions: {
+    demoFormStarted: number
+    demoFormCompleted: number
+    freeTrialFormStarted: number
+    freeTrialFormCompleted: number
+    monthlyFormStarted: number
+    monthlyFormCompleted: number
+    annualFormStarted: number
+    annualFormCompleted: number
+  }
+  videoInteractions: {
+    videoLoaded: number
+    videoClicked: number
+  }
+  sessionMetrics: {
+    avgSessionDuration: number
+    avgScrollDepth: number
+    avgButtonsClicked: number
+  }
+  conversionRates: {
+    demoToSchedule: number
+    trialToComplete: number
+    monthlyToComplete: number
+    annualToComplete: number
+  }
 }
 
-interface DailyAnalytics {
+interface DailySummary {
   date: string
-  total_sessions: number
-  unique_visitors: number
-  conversions: number
-  conversion_rate: number
+  uniqueVisitors: number
+  uniqueDemoClicks: number
+  uniqueTrialClicks: number
+  uniqueMonthlyClicks: number
+  uniqueAnnualClicks: number
+  signups: number
+  avgSessionDuration: number
 }
 
-interface SessionDetail {
-  session_id: string
-  first_seen: string
-  last_seen: string
-  ip_address: string
-  country: string
-  city: string
-  user_agent: string
-  converted: boolean
-  conversion_plan: string
-  users: any
-  events: any[]
-  device_info: {
-    browser: string
-    os: string
-    device: string
-  }
+interface DayDetail {
+  time: string
+  user: string
+  action: string
+  value: string
 }
 
-export default function AnalyticsDashboard() {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [dailyAnalytics, setDailyAnalytics] = useState<DailyAnalytics[]>([])
-  const [cities, setCities] = useState<string[]>([])
-  const [selectedDay, setSelectedDay] = useState<SessionDetail[] | null>(null)
-  const [selectedDayDate, setSelectedDayDate] = useState<string>("")
+export default function DashboardPage() {
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(true)
-  
-  // Filters
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [selectedCity, setSelectedCity] = useState("all")
+  const [dailySummaries, setDailySummaries] = useState<DailySummary[]>([])
+  const [showDayDetails, setShowDayDetails] = useState<string | null>(null)
+  const [dayDetails, setDayDetails] = useState<DayDetail[]>([])
 
   useEffect(() => {
-    async function fetchAnalytics() {
-      try {
-        console.log("🔍 Fetching analytics data...")
-        const [analyticsData, dailyData, citiesData] = await Promise.all([
-          database.getAnalytics(),
-          database.getDailyAnalytics(),
-          database.getCities()
-        ])
-        
-        console.log("📊 Analytics data:", analyticsData)
-        console.log("📅 Daily data:", dailyData)
-        console.log("🏙️ Cities:", citiesData)
-        
-        // Debug the data inconsistency
-        console.log("🔍 DEBUG - Users vs Sessions:", {
-          totalUsers: analyticsData.totalUsers,
-          uniqueVisitors: analyticsData.uniqueVisitors,
-          recentUsersCount: analyticsData.recentUsers.length,
-          dailyDataDays: dailyData.length
-        })
-        
-        setAnalytics(analyticsData)
-        setDailyAnalytics(dailyData)
-        setCities(citiesData)
-      } catch (error) {
-        console.error("❌ Failed to fetch analytics:", error)
-      } finally {
-        setLoading(false)
+    fetchAnalyticsData()
+    // Mock daily summaries
+    setDailySummaries([
+      {
+        date: "2024-07-13",
+        uniqueVisitors: 1200,
+        uniqueDemoClicks: 140,
+        uniqueTrialClicks: 80,
+        uniqueMonthlyClicks: 60,
+        uniqueAnnualClicks: 30,
+        signups: 40,
+        avgSessionDuration: 4.1
+      },
+      {
+        date: "2024-07-12",
+        uniqueVisitors: 1100,
+        uniqueDemoClicks: 120,
+        uniqueTrialClicks: 70,
+        uniqueMonthlyClicks: 50,
+        uniqueAnnualClicks: 25,
+        signups: 35,
+        avgSessionDuration: 3.8
+      },
+      {
+        date: "2024-07-11",
+        uniqueVisitors: 900,
+        uniqueDemoClicks: 100,
+        uniqueTrialClicks: 60,
+        uniqueMonthlyClicks: 40,
+        uniqueAnnualClicks: 20,
+        signups: 30,
+        avgSessionDuration: 3.5
       }
-    }
+    ])
+  }, [selectedDate])
 
-    fetchAnalytics()
-  }, [])
-
-  const handleFilterChange = async () => {
+  const fetchAnalyticsData = async () => {
+    setLoading(true)
     try {
-      const filteredData = await database.getDailyAnalytics({
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        city: selectedCity === "all" ? undefined : selectedCity
-      })
-      setDailyAnalytics(filteredData)
+      // This would be replaced with actual API calls to your database
+      // For now, using mock data
+      const mockData: AnalyticsData = {
+        totalVisitors: 1247,
+        earlyExits: 89,
+        scrollDepth: {
+          hero: 1247,
+          features: 892,
+          howItWorks: 654,
+          testimonials: 456,
+          pricing: 234
+        },
+        buttonClicks: {
+          demoButton: 156,
+          freeTrial: 89,
+          monthlyPlan: 67,
+          annualPlan: 45
+        },
+        formInteractions: {
+          demoFormStarted: 156,
+          demoFormCompleted: 23,
+          freeTrialFormStarted: 89,
+          freeTrialFormCompleted: 34,
+          monthlyFormStarted: 67,
+          monthlyFormCompleted: 12,
+          annualFormStarted: 45,
+          annualFormCompleted: 8
+        },
+        videoInteractions: {
+          videoLoaded: 654,
+          videoClicked: 123
+        },
+        sessionMetrics: {
+          avgSessionDuration: 4.2,
+          avgScrollDepth: 0.67,
+          avgButtonsClicked: 1.2
+        },
+        conversionRates: {
+          demoToSchedule: 14.7,
+          trialToComplete: 38.2,
+          monthlyToComplete: 17.9,
+          annualToComplete: 17.8
+        }
+      }
+      setAnalyticsData(mockData)
     } catch (error) {
-      console.error("Failed to apply filters:", error)
+      console.error("Failed to fetch analytics data:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (startDate || endDate || (selectedCity && selectedCity !== "all")) {
-      handleFilterChange()
-    }
-  }, [startDate, endDate, selectedCity])
+  const handleViewDetails = (date: string) => {
+    // Mock day details
+    setDayDetails([
+      { time: "09:01", user: "Alice", action: "Visited", value: "-" },
+      { time: "09:02", user: "Alice", action: "Clicked Demo", value: "Header" },
+      { time: "09:03", user: "Alice", action: "Filled Trial Form", value: "Free" },
+      { time: "09:04", user: "Bob", action: "Visited", value: "-" },
+      { time: "09:05", user: "Bob", action: "Clicked Monthly", value: "Pricing" },
+      { time: "09:06", user: "Bob", action: "Filled Monthly Form", value: "Monthly" },
+      { time: "09:07", user: "Charlie", action: "Visited", value: "-" },
+      { time: "09:08", user: "Charlie", action: "Clicked Demo", value: "Hero" },
+      { time: "09:09", user: "Charlie", action: "Scheduled Demo", value: "Calendly" }
+    ])
+    setShowDayDetails(date)
+  }
 
-  const handleDayClick = async (date: string) => {
-    try {
-      setSelectedDayDate(date)
-      const dayDetails = await database.getDayDetails(date)
-      console.log("🔍 Day details for", date, ":", dayDetails)
-      setSelectedDay(dayDetails)
-    } catch (error) {
-      console.error("Failed to fetch day details:", error)
-    }
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat().format(num)
+  }
+
+  const formatPercentage = (num: number) => {
+    return `${num.toFixed(1)}%`
+  }
+
+  const getConversionColor = (rate: number) => {
+    if (rate >= 20) return "text-green-500"
+    if (rate >= 10) return "text-yellow-500"
+    return "text-red-500"
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white p-8">
+      <div className="min-h-screen bg-slate-950 text-white p-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">berrys.ai Analytics Dashboard</h1>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-400">Loading analytics...</div>
+          <div className="animate-pulse">
+            <div className="h-8 bg-slate-800 rounded w-1/4 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-32 bg-slate-800 rounded"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  if (!analytics) {
+  if (!analyticsData) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white p-8">
+      <div className="min-h-screen bg-slate-950 text-white p-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">berrys.ai Analytics Dashboard</h1>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-red-400">Failed to load analytics. Check your database connection.</div>
-          </div>
+          <h1 className="text-2xl font-bold mb-8">Analytics Dashboard</h1>
+          <p className="text-slate-400">No data available</p>
         </div>
       </div>
     )
   }
-
-  // Calculate funnel metrics for overview
-  const funnelCounts = analytics.funnelData.reduce(
-    (acc, event) => {
-      acc[event.event_name] = (acc[event.event_name] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
-
-  const pageViews = funnelCounts.page_loaded || 0
-  const demoRequests = funnelCounts.demo_requested || 0
-  const planSelections = funnelCounts.plan_selected || 0
-  const signups = funnelCounts.signup_completed || 0
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <div className="min-h-screen bg-slate-950 text-white p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">berrys.ai Analytics Dashboard</h1>
-          <a href="/" className="text-purple-400 hover:text-purple-300 transition-colors">
-            ← Back to Website
-          </a>
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+            <p className="text-slate-400 mt-2">Track your website performance and user behavior</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
+            />
+            <Button onClick={fetchAnalyticsData} className="bg-slate-700 hover:bg-slate-600">
+              Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Key Metrics Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-sm font-medium">Total Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-400">{analytics.totalUsers}</div>
-              <p className="text-gray-400 text-xs mt-1">Signed up users</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-sm font-medium">Unique Visitors</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-400">{analytics.uniqueVisitors}</div>
-              <p className="text-gray-400 text-xs mt-1">Unique sessions</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-sm font-medium">Conversion Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-400">
-                {analytics.uniqueVisitors > 0
-                  ? ((analytics.totalUsers / analytics.uniqueVisitors) * 100).toFixed(1)
-                  : 0}
-                %
-              </div>
-              <p className="text-gray-400 text-xs mt-1">Visitors to signups</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-sm font-medium">Demo Requests</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-yellow-400">{demoRequests}</div>
-              <p className="text-gray-400 text-xs mt-1">Calendly bookings</p>
-            </CardContent>
-          </Card>
+        {/* Day-level summary table */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-2">Daily Summary</h2>
+          <div className="overflow-x-auto rounded-lg border border-slate-800">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-900">
+                <tr>
+                  <th className="px-4 py-2 text-left">Date</th>
+                  <th className="px-4 py-2 text-left">Unique Visitors</th>
+                  <th className="px-4 py-2 text-left">Unique Demo Clicks</th>
+                  <th className="px-4 py-2 text-left">Unique Trial Clicks</th>
+                  <th className="px-4 py-2 text-left">Unique Monthly Clicks</th>
+                  <th className="px-4 py-2 text-left">Unique Annual Clicks</th>
+                  <th className="px-4 py-2 text-left">Signups</th>
+                  <th className="px-4 py-2 text-left">Avg Session (min)</th>
+                  <th className="px-4 py-2 text-left">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailySummaries.map((day) => (
+                  <tr key={day.date} className="border-b border-slate-800">
+                    <td className="px-4 py-2">{day.date}</td>
+                    <td className="px-4 py-2">{formatNumber(day.uniqueVisitors)}</td>
+                    <td className="px-4 py-2">{formatNumber(day.uniqueDemoClicks)}</td>
+                    <td className="px-4 py-2">{formatNumber(day.uniqueTrialClicks)}</td>
+                    <td className="px-4 py-2">{formatNumber(day.uniqueMonthlyClicks)}</td>
+                    <td className="px-4 py-2">{formatNumber(day.uniqueAnnualClicks)}</td>
+                    <td className="px-4 py-2">{formatNumber(day.signups)}</td>
+                    <td className="px-4 py-2">{day.avgSessionDuration}</td>
+                    <td className="px-4 py-2">
+                      <Button size="sm" variant="outline" onClick={() => handleViewDetails(day.date)}>
+                        View Details
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-
-
-        {/* Daily Analytics Table with Filters */}
-        <Card className="bg-gray-900 border-gray-800 mb-8">
-          <CardHeader>
-            <CardTitle className="text-white">Daily Analytics</CardTitle>
-            <CardDescription className="text-gray-400">
-              Click on any day to see detailed user logs. Use filters to narrow down data.
-            </CardDescription>
-            
-            {/* Filters */}
-            <div className="flex gap-4 mt-4">
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm text-gray-300">Start Date</label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm text-gray-300">End Date</label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm text-gray-300">City</label>
-                <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="All cities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All cities</SelectItem>
-                    {cities.map((city) => (
-                      <SelectItem key={city} value={city}>
-                        {city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {(startDate || endDate || (selectedCity && selectedCity !== "all")) && (
-                <div className="flex flex-col justify-end">
-                  <button
-                    onClick={() => {
-                      setStartDate("")
-                      setEndDate("")
-                      setSelectedCity("all")
-                    }}
-                    className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300"
-                  >
-                    Clear Filters
-                  </button>
-                </div>
-              )}
+        {/* Day details modal/table */}
+        {showDayDetails && (
+          <div className="mb-8 bg-slate-900 border border-slate-800 rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Details for {showDayDetails}</h3>
+              <Button size="sm" variant="ghost" onClick={() => setShowDayDetails(null)}>
+                Close
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {dailyAnalytics.length === 0 ? (
-              <div className="text-gray-400 text-center py-8">
-                No data available for the selected filters.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-300">Date</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Total Sessions</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Unique Visitors</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Conversions</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Conversion Rate</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Actions</th>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-800">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Time</th>
+                    <th className="px-4 py-2 text-left">User</th>
+                    <th className="px-4 py-2 text-left">Action</th>
+                    <th className="px-4 py-2 text-left">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayDetails.map((row, i) => (
+                    <tr key={i} className="border-b border-slate-800">
+                      <td className="px-4 py-2">{row.time}</td>
+                      <td className="px-4 py-2">{row.user}</td>
+                      <td className="px-4 py-2">{row.action}</td>
+                      <td className="px-4 py-2">{row.value}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {dailyAnalytics.map((day) => (
-                      <tr key={day.date} className="border-b border-gray-800 hover:bg-gray-800/50">
-                        <td className="py-3 px-4 text-white font-medium">
-                          {new Date(day.date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 text-blue-400">{day.total_sessions}</td>
-                        <td className="py-3 px-4 text-green-400">{day.unique_visitors}</td>
-                        <td className="py-3 px-4 text-purple-400">{day.conversions}</td>
-                        <td className="py-3 px-4 text-yellow-400">{day.conversion_rate}%</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleDayClick(day.date)}
-                            className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm text-white transition-colors"
-                          >
-                            View Details
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
-        {/* Recent Signups */}
-        <Card className="bg-gray-900 border-gray-800 mb-8">
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Total Visitors</CardTitle>
+              <Users className="h-4 w-4 text-slate-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(analyticsData.totalVisitors)}</div>
+              <p className="text-xs text-slate-400 mt-1">Today's unique visitors</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Early Exits</CardTitle>
+              <XCircle className="h-4 w-4 text-slate-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(analyticsData.earlyExits)}</div>
+              <p className="text-xs text-slate-400 mt-1">
+                {formatPercentage((analyticsData.earlyExits / analyticsData.totalVisitors) * 100)} of visitors
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Avg Session Duration</CardTitle>
+              <Clock className="h-4 w-4 text-slate-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{analyticsData.sessionMetrics.avgSessionDuration}m</div>
+              <p className="text-xs text-slate-400 mt-1">Average time on site</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Avg Scroll Depth</CardTitle>
+              <Scroll className="h-4 w-4 text-slate-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatPercentage(analyticsData.sessionMetrics.avgScrollDepth * 100)}</div>
+              <p className="text-xs text-slate-400 mt-1">Average scroll depth</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Scroll Depth Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Scroll className="h-5 w-5" />
+                <span>Scroll Depth by Section</span>
+              </CardTitle>
+              <CardDescription>How far users scroll through your content</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(analyticsData.scrollDepth).map(([section, count]) => (
+                <div key={section} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-slate-600 rounded-full"></div>
+                    <span className="text-sm capitalize">{section.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">{formatNumber(count)}</span>
+                    <span className="text-xs text-slate-400">
+                      ({formatPercentage((count / analyticsData.totalVisitors) * 100)})
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Button Click Tracking */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MousePointer className="h-5 w-5" />
+                <span>Button Click Tracking</span>
+              </CardTitle>
+              <CardDescription>User interactions with key CTAs</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(analyticsData.buttonClicks).map(([button, count]) => (
+                <div key={button} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm capitalize">{button.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">{formatNumber(count)}</span>
+                    <span className="text-xs text-slate-400">
+                      ({formatPercentage((count / analyticsData.totalVisitors) * 100)})
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Conversion Funnel */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5" />
+                <span>Conversion Funnel</span>
+              </CardTitle>
+              <CardDescription>Form completion rates by plan type</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(analyticsData.conversionRates).map(([funnel, rate]) => (
+                <div key={funnel} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-sm capitalize">{funnel.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-sm font-medium ${getConversionColor(rate)}`}>
+                      {formatPercentage(rate)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Video Interactions */}
+          <Card className="bg-slate-900 border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Play className="h-5 w-5" />
+                <span>Video Interactions</span>
+              </CardTitle>
+              <CardDescription>User engagement with demo video</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm">Video Loaded</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">{formatNumber(analyticsData.videoInteractions.videoLoaded)}</span>
+                  <span className="text-xs text-slate-400">
+                    ({formatPercentage((analyticsData.videoInteractions.videoLoaded / analyticsData.totalVisitors) * 100)})
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">Video Clicked</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">{formatNumber(analyticsData.videoInteractions.videoClicked)}</span>
+                  <span className="text-xs text-slate-400">
+                    ({formatPercentage((analyticsData.videoInteractions.videoClicked / analyticsData.videoInteractions.videoLoaded) * 100)})
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Form Interaction Details */}
+        <Card className="bg-slate-900 border-slate-800">
           <CardHeader>
-            <CardTitle className="text-white">Recent Signups</CardTitle>
-            <CardDescription className="text-gray-400">Latest user registrations</CardDescription>
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5" />
+              <span>Form Interaction Details</span>
+            </CardTitle>
+            <CardDescription>Detailed breakdown of form starts vs completions</CardDescription>
           </CardHeader>
           <CardContent>
-            {analytics.recentUsers.length === 0 ? (
-              <div className="text-gray-400 text-center py-8">
-                No signups yet. Share your website to get your first users!
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {analytics.recentUsers.map((user, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                    <div>
-                      <div className="text-white font-medium">{user.name}</div>
-                      <div className="text-gray-400 text-sm">
-                        {user.city} • {user.email}
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Object.entries(analyticsData.formInteractions).map(([form, count]) => {
+                const isStarted = form.includes('Started')
+                const isCompleted = form.includes('Completed')
+                const plan = form.replace('FormStarted', '').replace('FormCompleted', '')
+                
+                return (
+                  <div key={form} className="text-center">
+                    <div className={`text-2xl font-bold ${isCompleted ? 'text-green-500' : 'text-blue-500'}`}>
+                      {formatNumber(count)}
                     </div>
-                    <div className="text-right">
-                      <div className="text-purple-400 font-medium capitalize">{user.selected_plan}</div>
-                      <div className="text-gray-400 text-sm">{new Date(user.created_at).toLocaleDateString()}</div>
+                    <div className="text-sm text-slate-400 capitalize">
+                      {plan.replace(/([A-Z])/g, ' $1').trim()} {isStarted ? 'Started' : 'Completed'}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                )
+              })}
+            </div>
           </CardContent>
         </Card>
-
-        {/* Day Details Table */}
-        {selectedDay && (
-          <Card className="bg-gray-900 border-gray-800 mb-8">
-            <CardHeader>
-              <CardTitle className="text-white">
-                User Details for {new Date(selectedDayDate).toLocaleDateString()}
-              </CardTitle>
-              <CardDescription className="text-gray-400">
-                All users and visitors for this day
-              </CardDescription>
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setSelectedDay(null)}
-                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm text-gray-300"
-                >
-                  Close
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-gray-300">Name</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Email</th>
-                      <th className="text-left py-3 px-4 text-gray-300">City</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Time</th>
-                      <th className="text-left py-3 px-4 text-gray-300">IP Address</th>
-                      <th className="text-left py-3 px-4 text-gray-300">User Agent</th>
-                      <th className="text-left py-3 px-4 text-gray-300">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedDay.map((session, index) => (
-                      <tr key={session.session_id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                        <td className="py-3 px-4 text-white">
-                          {session.users?.name || (session.converted ? "Converted User" : "Anonymous")}
-                        </td>
-                        <td className="py-3 px-4 text-gray-300">
-                          {session.users?.email || "—"}
-                        </td>
-                        <td className="py-3 px-4 text-gray-300">
-                          {session.city || "Unknown"}
-                        </td>
-                        <td className="py-3 px-4 text-gray-300">
-                          {new Date(session.first_seen).toLocaleTimeString()}
-                        </td>
-                        <td className="py-3 px-4 text-gray-300 font-mono text-sm">
-                          {session.ip_address || "127.0.0.1"}
-                        </td>
-                        <td className="py-3 px-4 text-gray-300 max-w-xs truncate" title={session.user_agent}>
-                          {session.device_info.browser} ({session.device_info.os})
-                        </td>
-                        <td className="py-3 px-4">
-                          {session.converted ? (
-                            <span className="px-2 py-1 bg-green-600 text-green-100 rounded text-xs">
-                              Converted
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 bg-gray-600 text-gray-300 rounded text-xs">
-                              Visitor
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   )
