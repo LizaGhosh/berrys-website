@@ -906,7 +906,23 @@ export default function HomePage() {
             </div>
             <span className="text-xl font-semibold text-slate-100">berrys.ai</span>
           </div>
-          <p className="text-slate-400">© 2024 berrys.ai. All rights reserved.</p>
+          <p className="text-slate-400 mb-4">© 2024 berrys.ai. All rights reserved.</p>
+          <div className="flex justify-center">
+            <a 
+              href="https://www.linkedin.com/company/berrys-ai" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-violet-400 transition-colors duration-200"
+              onClick={() => {
+                trackEvent("social_link_click", {
+                  event_category: "social",
+                  event_label: "linkedin",
+                })
+              }}
+            >
+              LinkedIn
+            </a>
+          </div>
         </div>
       </footer>
 
