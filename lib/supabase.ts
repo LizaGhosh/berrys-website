@@ -19,12 +19,16 @@ export const database = {
     country?: string
     city?: string
   }) {
-    const { error } = await supabase.from("events").insert([
+    const { error } = await supabase.from("analytics_events").insert([
       {
-        ...eventData,
-        client_timestamp: new Date().toISOString(),
-        app_version: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
-        deployment_id: process.env.VERCEL_DEPLOYMENT_ID || "local",
+        session_id: eventData.session_id,
+        event_type: eventData.event_name,
+        event_data: eventData.event_properties,
+        timestamp: new Date().toISOString(),
+        user_agent: eventData.user_agent,
+        url: eventData.page_url,
+        referrer: eventData.referrer,
+        visitor_id: eventData.session_id, // Use session_id as visitor_id for compatibility
       },
     ])
 

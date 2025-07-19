@@ -133,6 +133,8 @@ export default function HomePage() {
 
   // Track initial page load
   useEffect(() => {
+    console.log('🔍 HomePage: Initializing analytics tracking...')
+    
     // Google Analytics tracking
     trackEvent("page_loaded", {
       event_category: "page_interaction",
@@ -144,6 +146,8 @@ export default function HomePage() {
       page: "home",
       timestamp: new Date().toISOString(),
     })
+    
+    console.log('✅ HomePage: Analytics tracking initialized')
   }, [])
 
   const handlePlanSelect = (plan: string) => {
@@ -244,7 +248,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center border border-slate-700/50">
+              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center border border-slate-700/50">
                 <span className="text-white font-bold text-sm">B</span>
               </div>
               <span className="text-xl font-semibold text-slate-100">berrys.ai</span>
@@ -288,7 +292,7 @@ export default function HomePage() {
               </a>
               <Button
                 onClick={() => handleBookCall("header")}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-100 px-4 py-2 rounded-lg border border-slate-700/50 transition-all duration-200 hover:shadow-lg hover:shadow-slate-900/20"
+                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg border border-slate-700/50 transition-all duration-200 hover:shadow-lg hover:shadow-violet-900/20"
               >
                 Book Demo
               </Button>
@@ -306,7 +310,7 @@ export default function HomePage() {
           {/* Visual Status Indicator */}
           <div className="flex items-center justify-center mb-8">
             <div className="flex items-center space-x-2 text-sm text-slate-400 bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800/50 backdrop-blur-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
               <span>AI co-pilot for founders</span>
             </div>
           </div>
@@ -347,7 +351,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               onClick={() => handleBookCall("hero")}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-100 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto shadow-lg shadow-slate-900/25 border border-slate-700/50 transition-all duration-200 hover:shadow-xl hover:shadow-slate-900/30"
+              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto shadow-lg shadow-violet-900/25 border border-slate-700/50 transition-all duration-200 hover:shadow-xl hover:shadow-violet-900/30"
             >
               <span>Schedule a demo</span>
               <ArrowRight className="w-5 h-5" />
@@ -356,12 +360,12 @@ export default function HomePage() {
             <Button
               onClick={() => handlePlanSelect("free")}
               variant="outline"
-              className="border-2 border-emerald-800/60 hover:border-emerald-700/80 text-slate-200 hover:text-emerald-300 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto relative overflow-hidden group bg-slate-900/30 backdrop-blur-sm transition-all duration-200"
+              className="border-2 border-violet-800/60 hover:border-violet-700/80 text-slate-200 hover:text-violet-300 px-8 py-4 text-lg rounded-lg inline-flex items-center space-x-2 w-full sm:w-auto relative overflow-hidden group bg-slate-900/30 backdrop-blur-sm transition-all duration-200"
             >
-              <div className="absolute inset-0 bg-emerald-900/20 group-hover:bg-emerald-900/30 transition-colors duration-200"></div>
+              <div className="absolute inset-0 bg-violet-900/20 group-hover:bg-violet-900/30 transition-colors duration-200"></div>
               <div className="relative flex items-center space-x-2">
                 <span>Start Free Trial</span>
-                <div className="bg-emerald-600 text-slate-900 px-2 py-1 rounded text-xs font-bold">
+                <div className="bg-violet-600 text-white px-2 py-1 rounded text-xs font-bold">
                   2 MONTHS FREE
                 </div>
               </div>
@@ -375,37 +379,37 @@ export default function HomePage() {
       {/* Features Section - Elevated for First Page View */}
       <section
         id="features"
-        className="py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800/50"
+        className="py-6 px-4 sm:px-6 lg:px-8 border-t border-slate-800/50"
         onMouseEnter={() => handleSectionView("features")}
       >
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-700/50">
-                <Brain className="w-6 h-6 text-slate-300" />
+                <Brain className="w-6 h-6 text-violet-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-200 mb-2">Content Intelligence</h3>
-              <p className="text-slate-400 leading-relaxed text-xs">
+              <p className="text-slate-400 leading-relaxed text-sm">
                 AI analyzes your pitch structure, messaging clarity, and storytelling flow for maximum impact.
               </p>
             </div>
 
             <div className="text-center">
               <div className="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-700/50">
-                <TrendingUp className="w-6 h-6 text-slate-300" />
+                <TrendingUp className="w-6 h-6 text-violet-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-200 mb-2">Delivery Mastery</h3>
-              <p className="text-slate-400 leading-relaxed text-xs">
+              <p className="text-slate-400 leading-relaxed text-sm">
                 Real-time feedback on pacing, tone, and confidence levels to perfect your pitch delivery.
               </p>
             </div>
 
             <div className="text-center">
               <div className="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mx-auto mb-3 border border-slate-700/50">
-                <Target className="w-6 h-6 text-slate-300" />
+                <Target className="w-6 h-6 text-violet-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-200 mb-2">Instant Optimization</h3>
-              <p className="text-slate-400 leading-relaxed text-xs">
+              <p className="text-slate-400 leading-relaxed text-sm">
                 Get actionable suggestions to immediately enhance your pitch and increase success.
               </p>
             </div>
@@ -470,7 +474,7 @@ export default function HomePage() {
                       <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-slate-300 text-sm font-medium">Volume</span>
-                          <span className="text-emerald-400 font-semibold">7.5/10</span>
+                          <span className="text-violet-400 font-semibold">7.5/10</span>
                         </div>
                         <p className="text-slate-400 text-sm leading-relaxed">
                           Good projection and clear articulation. Maintains consistent volume throughout.
@@ -480,7 +484,7 @@ export default function HomePage() {
                       <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-slate-300 text-sm font-medium">Pace</span>
-                          <span className="text-emerald-400 font-semibold">8.5/10</span>
+                          <span className="text-violet-400 font-semibold">8.5/10</span>
                         </div>
                         <p className="text-slate-400 text-sm leading-relaxed">
                           Excellent pacing with strategic pauses. Good use of silence for emphasis.
@@ -492,7 +496,7 @@ export default function HomePage() {
                   <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700/50">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-slate-200 text-lg">Content Structure</h4>
-                      <span className="text-emerald-400 font-semibold">9.5/10</span>
+                      <span className="text-violet-400 font-semibold">9.5/10</span>
                     </div>
 
                     <div className="space-y-4">
@@ -529,7 +533,7 @@ export default function HomePage() {
                       <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-slate-300 text-sm font-medium">Eye Contact</span>
-                          <span className="text-emerald-400 font-semibold">8.5/10</span>
+                          <span className="text-violet-400 font-semibold">8.5/10</span>
                         </div>
                         <p className="text-slate-400 text-sm leading-relaxed">
                           Maintains strong, confident eye contact. Good engagement with audience.
@@ -539,7 +543,7 @@ export default function HomePage() {
                       <div className="bg-slate-900/30 rounded-lg p-4 border border-slate-700/30">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-slate-300 text-sm font-medium">Gestures</span>
-                          <span className="text-emerald-400 font-semibold">8.0/10</span>
+                          <span className="text-violet-400 font-semibold">8.0/10</span>
                         </div>
                         <p className="text-slate-400 text-sm leading-relaxed">
                           Uses purposeful hand gestures to emphasize points. Good use of space and movement.
@@ -551,7 +555,7 @@ export default function HomePage() {
                   <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700/50">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold text-slate-200 text-lg">Summary</h4>
-                      <div className="text-emerald-400 text-sm">Strong Performance</div>
+                      <div className="text-violet-400 text-sm">Strong Performance</div>
                     </div>
 
                     <div className="space-y-4">
@@ -559,15 +563,15 @@ export default function HomePage() {
                         <h5 className="text-slate-300 text-sm font-medium mb-2">Key Strengths</h5>
                         <div className="space-y-2">
                           <div className="flex items-start space-x-2">
-                            <span className="text-emerald-400 text-sm">✓</span>
+                            <span className="text-violet-400 text-sm">✓</span>
                             <p className="text-slate-400 text-sm">Perfect pitch structure & strong opening hook</p>
                           </div>
                           <div className="flex items-start space-x-2">
-                            <span className="text-emerald-400 text-sm">✓</span>
+                            <span className="text-violet-400 text-sm">✓</span>
                             <p className="text-slate-400 text-sm">Clear value proposition & excellent data usage</p>
                           </div>
                           <div className="flex items-start space-x-2">
-                            <span className="text-emerald-400 text-sm">✓</span>
+                            <span className="text-violet-400 text-sm">✓</span>
                             <p className="text-slate-400 text-sm">Confident delivery with strategic pauses</p>
                           </div>
                         </div>
@@ -722,25 +726,6 @@ export default function HomePage() {
 
           {/* Pricing Table */}
           <div className="mt-8">
-            {/* Header badges with proper spacing */}
-            <div className="flex justify-between items-center mb-4 px-4">
-              <div className="flex-1"></div>
-              <div className="flex-1 text-center">
-                <Badge className="bg-emerald-600 text-slate-900 px-3 py-1 text-xs font-bold shadow-lg">
-                  🎉 LIMITED TIME
-                </Badge>
-              </div>
-              <div className="flex-1 text-center">
-                <Badge className="bg-slate-700 text-slate-200 px-3 py-1 text-xs border border-slate-600">
-                  Most Popular
-                </Badge>
-              </div>
-              <div className="flex-1 text-center">
-                <Badge className="bg-emerald-600 text-slate-900 px-2 py-1 text-xs font-bold">
-                  Save 50%
-                </Badge>
-              </div>
-            </div>
             
             <div className="bg-slate-900/30 rounded-lg border border-slate-800/50 backdrop-blur-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -753,11 +738,11 @@ export default function HomePage() {
                         <div className="text-slate-400 text-sm">Perfect for getting started</div>
                         <div className="mt-2 flex items-center justify-center space-x-2">
                           <span className="text-2xl font-bold text-slate-100">Free</span>
-                          <div className="bg-emerald-600 text-slate-900 px-2 py-1 rounded text-xs font-bold">
+                          <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-2 py-1 rounded text-xs font-bold">
                             2 MONTHS
                           </div>
                         </div>
-                        <div className="text-emerald-400 text-xs mt-1">No credit card required</div>
+                        <div className="text-violet-400 text-xs mt-1">No credit card required</div>
                       </th>
                       <th className="text-center p-6">
                         <div className="text-slate-100 font-semibold text-lg">Monthly</div>
@@ -781,49 +766,49 @@ export default function HomePage() {
                   <tr className="hover:bg-slate-800/20 transition-colors">
                     <td className="p-4 text-slate-300 font-medium">Unlimited pitch analysis</td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-800/20 transition-colors">
                     <td className="p-4 text-slate-300 font-medium">AI feedback on content & delivery</td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-800/20 transition-colors">
                     <td className="p-4 text-slate-300 font-medium">Live recording or file upload</td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-800/20 transition-colors">
                     <td className="p-4 text-slate-300 font-medium">Basic improvement suggestions</td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-800/20 transition-colors">
@@ -832,10 +817,10 @@ export default function HomePage() {
                       <span className="text-slate-500">—</span>
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-800/20 transition-colors">
@@ -844,10 +829,10 @@ export default function HomePage() {
                       <span className="text-slate-500">—</span>
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
 
@@ -860,7 +845,7 @@ export default function HomePage() {
                       <span className="text-slate-500">—</span>
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-800/20 transition-colors">
@@ -872,7 +857,7 @@ export default function HomePage() {
                       <span className="text-slate-500">—</span>
                     </td>
                     <td className="p-4 text-center">
-                      <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto" />
+                      <CheckCircle className="w-5 h-5 text-violet-400 mx-auto" />
                     </td>
                   </tr>
                 </tbody>
@@ -881,7 +866,7 @@ export default function HomePage() {
                     <td className="p-4"></td>
                     <td className="p-4 text-center">
                       <Button
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-slate-900 font-semibold shadow-lg hover:shadow-emerald-500/25 transition-all duration-200"
+                        className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-violet-500/25 transition-all duration-200"
                         onClick={() => handlePlanSelect("free")}
                       >
                         Start 2-Month Free Trial
@@ -916,7 +901,7 @@ export default function HomePage() {
       <footer className="border-t border-slate-800/50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-3 mb-6">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center border border-slate-700/50">
+            <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center border border-slate-700/50">
               <span className="text-white font-bold text-sm">B</span>
             </div>
             <span className="text-xl font-semibold text-slate-100">berrys.ai</span>
@@ -938,9 +923,9 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <span>Start your</span>
-                    <Badge className="bg-emerald-600 text-slate-900 px-2 py-1 text-xs font-bold">2-MONTH FREE TRIAL</Badge>
+                    <Badge className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-2 py-1 text-xs font-bold">2-MONTH FREE TRIAL</Badge>
                   </div>
-                  <p className="text-sm text-emerald-400">No credit card required • Cancel anytime</p>
+                  <p className="text-sm text-violet-400">No credit card required • Cancel anytime</p>
                 </div>
               )}
               {selectedPlan === "monthly" && "Subscribe to Monthly Plan - $5/month"}
@@ -997,7 +982,7 @@ export default function HomePage() {
         <DialogContent className="sm:max-w-md bg-slate-900 border-slate-800 text-center">
           <DialogHeader>
             <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-emerald-400" />
+              <CheckCircle className="w-8 h-8 text-violet-400" />
             </div>
             <DialogTitle className="text-2xl font-semibold text-slate-100">Welcome to berrys.ai!</DialogTitle>
             <DialogDescription className="text-slate-400 leading-relaxed mt-4">
